@@ -211,17 +211,27 @@ def get_bookings_db():
     bookings_data = cursor.fetchall() # Retorna Rows, que se comportam como dicionários
     bookings = []
     for row in bookings_data:
+        # MODIFICAÇÃO AQUI: Garante que os datetimes são offset-naive
+        start_time_dt = datetime.fromisoformat(row["startTime"])
+        end_time_dt = datetime.fromisoformat(row["endTime"])
+        
+        # Se os objetos datetime tiverem informações de fuso horário, remova-as
+        if start_time_dt.tzinfo is not None:
+            start_time_dt = start_time_dt.replace(tzinfo=None)
+        if end_time_dt.tzinfo is not None:
+            end_time_dt = end_time_dt.replace(tzinfo=None)
+
         booking = {
             "id": row["id"],
             "courtId": row["courtId"],
-            "startTime": datetime.fromisoformat(row["startTime"]),
-            "endTime": datetime.fromisoformat(row["endTime"]),
+            "startTime": start_time_dt,
+            "endTime": end_time_dt,
             "players": json.loads(row["players"]),
             "status": row["status"],
             "bookedBy": row["bookedBy"],
             "isBlockBooking": bool(row["isBlockBooking"]),
             "blockBookingReason": row["blockBookingReason"],
-            "createdAt": datetime.fromisoformat(row["createdAt"])
+            "createdAt": datetime.fromisoformat(row["createdAt"]).replace(tzinfo=None) # Também para createdAt
         }
         bookings.append(booking)
     return bookings
@@ -230,6 +240,8 @@ def add_booking_db(court_id, start_time, end_time, players, is_block_booking=Fal
     conn = get_db()
     cursor = conn.cursor()
     
+    print(f"DEBUG: Tentando adicionar agendamento para Quadra: {court_id}, Início: {start_time}, Fim: {end_time}")
+
     # Verifica sobreposição de horários
     start_ts = start_time.isoformat()
     end_ts = end_time.isoformat()
@@ -245,6 +257,7 @@ def add_booking_db(court_id, start_time, end_time, players, is_block_booking=Fal
         (court_id, end_ts, start_ts, start_ts, end_ts, start_ts, end_ts)
     )
     if cursor.fetchone():
+        print(f"DEBUG: Conflito de horário detectado para Quadra: {court_id}, Início: {start_time}")
         return False, "Este horário está em conflito com um agendamento existente."
 
     players_json = json.dumps(players)
@@ -257,7 +270,18 @@ def add_booking_db(court_id, start_time, end_time, players, is_block_booking=Fal
             (court_id, start_time.isoformat(), end_time.isoformat(), players_json, "confirmed", 
              g.user['username'] if g.user else "desconhecido", is_block_booking_int, block_reason, datetime.now().isoformat())
         )
+        booking_id = cursor.lastrowid # Obtém o ID do último registro inserido
         conn.commit()
+        print(f"DEBUG: Agendamento inserido com sucesso! ID: {booking_id}")
+
+        # Opcional: Verificar se o agendamento foi realmente salvo
+        cursor.execute("SELECT * FROM bookings WHERE id = ?", (booking_id,))
+        saved_booking = cursor.fetchone()
+        if saved_booking:
+            print(f"DEBUG: Agendamento recuperado após commit: {saved_booking['courtId']} - {saved_booking['startTime']}")
+        else:
+            print("DEBUG: ERRO - Agendamento não recuperado após commit.")
+
         # Logar o evento de agendamento
         log_booking_event(
             "booked" if not is_block_booking else "blocked",
@@ -273,7 +297,14 @@ def add_booking_db(court_id, start_time, end_time, players, is_block_booking=Fal
         )
         return True, "Agendamento realizado com sucesso!" if not is_block_booking else "Quadra bloqueada com sucesso!"
     except sqlite3.Error as e:
+        conn.rollback() # Reverte a transação em caso de erro
+        print(f"DEBUG: ERRO SQLite ao adicionar agendamento: {e}")
         return False, f"Erro ao adicionar agendamento: {e}"
+    except Exception as e:
+        conn.rollback() # Reverte a transação em caso de erro
+        print(f"DEBUG: ERRO Geral ao adicionar agendamento: {e}")
+        return False, f"Erro inesperado ao adicionar agendamento: {e}"
+
 
 def cancel_booking_db(booking_id):
     conn = get_db()
@@ -416,6 +447,10 @@ def remove_from_waiting_list_db(entry_id):
 # --- Funções de Lógica de Negócios (similar ao Streamlit, adaptadas para Flask) ---
 def get_booking_status(booking, booking_duration_minutes):
     now = datetime.now()
+    # Garante que 'now' é offset-naive para comparação consistente
+    if now.tzinfo is not None:
+        now = now.replace(tzinfo=None)
+
     end_time = booking['endTime']
     start_time = booking['startTime']
 
@@ -540,13 +575,26 @@ def logout():
 @role_required(['admin', 'operator'])
 def index():
     settings = get_settings_db()
-    current_bookings = get_bookings_db()
+    all_bookings = get_bookings_db()
     waiting_list = get_waiting_list_db() 
 
     courts = [f"QUADRA {i + 1}" for i in range(7)]
     
     calendar_data = {court: [] for court in courts}
-    for booking in current_bookings:
+    
+    # FILTRAR AGENDAMENTOS PARA O DIA ATUAL E FUTURO AQUI
+    now = datetime.now()
+    if now.tzinfo is not None:
+        now = now.replace(tzinfo=None)
+
+    # Filtrar agendamentos a partir do início do dia atual
+    # Manter esta lógica para o index.html, pois ele renderiza os agendamentos diretamente
+    filtered_bookings = [
+        b for b in all_bookings 
+        if b['startTime'] >= now.replace(hour=0, minute=0, second=0, microsecond=0)
+    ]
+
+    for booking in filtered_bookings: # Usar os agendamentos filtrados
         if booking['courtId'] in calendar_data:
             booking['status_class'] = get_booking_status(booking, settings['bookingDurationMinutes'])
             
@@ -583,7 +631,9 @@ def index():
 @role_required(['admin', 'operator'])
 def book_court():
     court_id = request.form['courtId']
-    start_time_str = request.form['startTime']
+    # Alterado para pegar a data e a hora separadamente
+    booking_date_str = request.form['bookingDate']
+    booking_time_str = request.form['bookingTime']
     players_raw = request.form.getlist('players')
     players = [p.strip() for p in players_raw if p.strip()]
 
@@ -592,13 +642,16 @@ def book_court():
         return redirect(url_for('index'))
 
     try:
-        start_time_dt = datetime.fromisoformat(start_time_str)
+        # Combina data e hora para criar um objeto datetime offset-naive
+        start_time_dt = datetime.strptime(f"{booking_date_str} {booking_time_str}", "%Y-%m-%d %H:%M")
     except ValueError:
-        flash("Formato de hora inválido.", "error")
+        flash("Formato de data ou hora inválido.", "error")
         return redirect(url_for('index'))
 
     settings = get_settings_db()
-    end_time_dt = start_time_dt + timedelta(minutes=settings['bookingDurationMinutes'])
+    booking_duration_minutes = settings['bookingDurationMinutes']
+    actual_booking_duration = booking_duration_minutes - 1
+    end_time_dt = start_time_dt + timedelta(minutes=actual_booking_duration)
 
     success, message = add_booking_db(court_id, start_time_dt, end_time_dt, players)
     
@@ -666,6 +719,12 @@ def admin_panel():
             start_datetime = datetime.combine(datetime.fromisoformat(start_date_str).date(), datetime.strptime(start_time_str, '%H:%M').time())
             end_datetime = datetime.combine(datetime.fromisoformat(end_date_str).date(), datetime.strptime(end_time_str, '%H:%M').time())
 
+            # Garante que os datetimes são offset-naive
+            if start_datetime.tzinfo is not None:
+                start_datetime = start_datetime.replace(tzinfo=None)
+            if end_datetime.tzinfo is not None:
+                end_datetime = end_datetime.replace(tzinfo=None)
+
             if start_datetime >= end_datetime:
                 flash("A data/hora de início deve ser anterior à data/hora de término.", "error")
             elif not reason:
@@ -716,48 +775,46 @@ def tv_view():
 @login_required
 @role_required(['admin', 'viewer'])
 def api_dashboard_data():
-    settings = get_settings_db()
-    all_bookings = get_bookings_db()
+    print("API: /api/dashboard_data chamada.")
+    try:
+        settings = get_settings_db()
+        print(f"API: Configurações obtidas: {settings}")
+        all_bookings = get_bookings_db()
+        print(f"API: Total de agendamentos brutos obtidos: {len(all_bookings)}")
 
-    courts = [f"QUADRA {i + 1}" for i in range(7)]
-    dashboard_output_data = []
+        courts = [f"QUADRA {i + 1}" for i in range(7)]
+        dashboard_output_data = []
 
-    start_display_hour = 8 
-    end_display_hour = 23 # Display until 23:59:59
+        now = datetime.now()
+        if now.tzinfo is not None:
+            now = now.replace(tzinfo=None)
 
-    now = datetime.now()
-    today = now.replace(hour=0, minute=0, second=0, microsecond=0) # Apenas a data de hoje
+        # Define o período de exibição para incluir o dia atual e o próximo dia
+        # Isso garante que agendamentos futuros sejam buscados para o cálculo do próximo slot
+        display_start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Buscar agendamentos que terminam até o final do dia seguinte (48 horas a partir do início do dia atual)
+        display_end_time = display_start_time + timedelta(days=2) 
 
-    for court_name in courts:
-        court_bookings = sorted([b for b in all_bookings if b['courtId'] == court_name], key=lambda x: x['startTime'])
-        
-        court_display_slots = []
-        
-        # Gera todos os slots de 30 minutos para o dia de exibição
-        current_slot_time = today.replace(hour=start_display_hour, minute=0, second=0, microsecond=0)
-        slot_granularity_minutes = 30 # A granularidade dos slots de exibição
+        print(f"API: Hora atual: {now}, Período de exibição: {display_start_time} a {display_end_time}")
 
-        while current_slot_time <= today.replace(hour=end_display_hour, minute=59, second=59, microsecond=999999):
-            slot_end_time = current_slot_time + timedelta(minutes=slot_granularity_minutes)
-            
-            # Encontra um agendamento que se sobreponha a este slot de tempo
-            overlapping_booking = None
+        for court_name in courts:
+            # Filtrar agendamentos para esta quadra que estão dentro do período de exibição
+            # E que ainda não terminaram (endTime > now)
+            court_bookings = sorted([
+                b for b in all_bookings 
+                if b['courtId'] == court_name and b['endTime'] > now # Apenas agendamentos ativos ou futuros
+            ], key=lambda x: x['startTime'])
+            print(f"API: Agendamentos ATIVOS/FUTUROS para {court_name} no período de exibição: {len(court_bookings)}")
+
+            court_display_slots = []
+
             for booking in court_bookings:
-                # Condição de sobreposição: [start1, end1) e [start2, end2) se sobrepõem se start1 < end2 e end1 > start2
-                if booking['startTime'] < slot_end_time and booking['endTime'] > current_slot_time:
-                    overlapping_booking = booking
-                    break
-            
-            slot_status_class = ''
-            content_html = ''
-            slot_type = 'free'
+                # Se há um agendamento, adicione-o
+                booking_status_from_logic = get_booking_status(booking, settings['bookingDurationMinutes'])
 
-            if overlapping_booking:
-                # Se há um agendamento sobreposto, use seus dados
-                booking_status_from_logic = get_booking_status(overlapping_booking, settings['bookingDurationMinutes'])
-                
                 # Mapeia os status do backend para as classes CSS do frontend
-                if overlapping_booking['isBlockBooking']:
+                slot_status_class = ''
+                if booking['isBlockBooking']:
                     slot_status_class = 'block-booking-tv' # Classe específica para bloqueio
                 elif booking_status_from_logic == 'playing':
                     slot_status_class = 'slot-playing-active' # Classe para "em jogo"
@@ -766,57 +823,47 @@ def api_dashboard_data():
                 elif booking_status_from_logic == 'confirmed':
                     slot_status_class = 'slot-ocupado'
                 elif booking_status_from_logic == 'faded-past':
-                    slot_status_class = 'slot-passado'
+                    # Este status é para agendamentos passados, mas já filtramos para endTime > now
+                    # Então, este caso idealmente não deve ser atingido, a menos que um agendamento tenha acabado de terminar.
+                    slot_status_class = 'slot-passado' 
 
-                players_or_reason = (', '.join(overlapping_booking['players']) if not overlapping_booking['isBlockBooking'] 
-                                     else overlapping_booking['blockBookingReason'])
+                players_or_reason = (', '.join(booking['players']) if not booking['isBlockBooking'] 
+                                         else booking['blockBookingReason'])
 
                 content_html = (
                     f"<span class='cliente-nome'>{players_or_reason}</span>"
-                    f"<span class='horario-time'>{overlapping_booking['startTime'].strftime('%H:%M')} - {overlapping_booking['endTime'].strftime('%H:%M')}</span>"
+                    f"<span class='horario-time'>{booking['startTime'].strftime('%H:%M')} - {booking['endTime'].strftime('%H:%M')}</span>"
                 )
-                slot_type = 'booked' if not overlapping_booking['isBlockBooking'] else 'blocked'
 
-            else:
-                # Se não há agendamento sobreposto, o slot está livre
-                if current_slot_time < now and slot_end_time > now: # Slot atual (parcialmente no passado e futuro)
-                    slot_status_class = 'slot-atual'
-                    content_html = f"<span class='horario-time'>{current_slot_time.strftime('%H:%M')} - {slot_end_time.strftime('%H:%M')}</span>"
-                elif slot_end_time <= now: # Slot no passado
-                    slot_status_class = 'slot-passado'
-                    content_html = f"<span class='horario-time'>{current_slot_time.strftime('%H:%M')} - {slot_end_time.strftime('%H:%M')}</span>"
-                else: # Slot no futuro
-                    slot_status_class = 'slot-livre'
-                    content_html = f"<span class='horario-time'>{current_slot_time.strftime('%H:%M')} - {slot_end_time.strftime('%H:%M')}</span>"
-                slot_type = 'free'
+                court_display_slots.append({
+                    'startTime': booking['startTime'].isoformat(),
+                    'endTime': booking['endTime'].isoformat(),
+                    'content': content_html,
+                    'status_class': slot_status_class,
+                    'type': 'booked' if not booking['isBlockBooking'] else 'blocked'
+                })
 
-            court_display_slots.append({
-                'startTime': current_slot_time.isoformat(),
-                'endTime': slot_end_time.isoformat(),
-                'content': content_html,
-                'status_class': slot_status_class,
-                'type': slot_type
+            # Determina o status geral da quadra (livre/ocupada) para o cabeçalho
+            quadra_overall_status = 'livre'
+            for booking in court_bookings:
+                # Se há um agendamento ou bloqueio ativo AGORA
+                if now >= booking['startTime'] and now < booking['endTime']:
+                    quadra_overall_status = 'ocupada'
+                    break
+
+            dashboard_output_data.append({
+                'id': court_name, 
+                'nome': court_name,
+                'tipo': 'Tênis/Esportes',
+                'status': quadra_overall_status,
+                'agendamentos': court_display_slots
             })
-            
-            current_slot_time += timedelta(minutes=slot_granularity_minutes)
-
-        # Determina o status geral da quadra (livre/ocupada) para o cabeçalho
-        quadra_overall_status = 'livre'
-        for booking in court_bookings:
-            # Se há um agendamento ou bloqueio ativo AGORA
-            if now >= booking['startTime'] and now < booking['endTime']:
-                quadra_overall_status = 'ocupada'
-                break
-
-        dashboard_output_data.append({
-            'id': court_name, 
-            'nome': court_name,
-            'tipo': 'Tênis/Esportes',
-            'status': quadra_overall_status,
-            'agendamentos': court_display_slots
-        })
-    
-    return jsonify(dashboard_output_data)
+        
+        print(f"API: Dados de dashboard a serem retornados: {len(dashboard_output_data)} quadras.")
+        return jsonify(dashboard_output_data)
+    except Exception as e:
+        print(f"API ERROR: Erro na rota /api/dashboard_data: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/statistics')
@@ -1034,4 +1081,4 @@ def api_get_waiting_list():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True)
