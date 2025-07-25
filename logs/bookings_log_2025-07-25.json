@@ -94,5 +94,21 @@
             "blockBookingReason": ""
         },
         "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-25T16:15:14.380355",
+        "event_type": "booked",
+        "booking_info": {
+            "courtId": "QUADRA 2",
+            "startTime": "2025-07-25T16:15:00",
+            "endTime": "2025-07-25T17:04:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
     }
 ]

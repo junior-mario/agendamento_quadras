@@ -1,9 +1,10 @@
+<!-- templates/tv_view.html -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Agendamento de Quadras</title>
+    <title>Marcação de Quadras - Visão TV</title>
     <style>
         /* Reset básico */
         * {
@@ -33,57 +34,112 @@
             --color-card-background: #ffffff; /* Cartões em branco puro para contraste */
             --color-border-beige: #E0D8CC; /* Borda bege/light brown */
             --color-input-border: #D1C7B7;
-            --color-tag-bg: #DCE8DA;
-            --color-tag-text: #355E3B;
+            
+            /* TV View Specific Colors (Ajustadas para maior clareza e contraste) */
+            --tv-free-bg: #e6ffe6; /* Light green for free slots */
+            --tv-free-text: #155724;
+            --tv-free-border: #a3e6a3;
 
-            /* Cores específicas para slots da dashboard (mantendo o padrão anterior com transparência) */
-            --slot-free-bg: rgba(230, 255, 230, 0.6); /* #e6ffe6 com transparência */
-            --slot-free-border: rgba(163, 230, 163, 0.8); /* #a3e6a3 com transparência */
-            --slot-free-text: #155724; 
+            --tv-booked-bg: #cceeff; /* Light blue for booked slots */
+            --tv-booked-text: #0056b3;
+            --tv-booked-border: #007bff;
 
-            --slot-occupied-bg: rgba(204, 238, 255, 0.6); /* #cceeff com transparência (azul) */
-            --slot-occupied-border: rgba(0, 123, 255, 0.8); /* #007bff com transparência */
-            --slot-occupied-text: #0056b3;
+            --block-booking-bg: #e0bbe4; /* Lilac/Purple for blocked */
+            --block-booking-text: #6a0572;
+            --block-booking-border: #bb7ec2;
 
-            /* NOVO: Cores para "Em Jogo" (verde mais escuro) */
-            --slot-playing-active-bg: rgba(53, 94, 59, 0.8); /* Verde floresta/pinho com transparência */
-            --slot-playing-active-border: rgba(43, 75, 48, 0.9);
-            --slot-playing-active-text: white; /* Texto branco */
+            --past-slot-bg: #f0f0f0; /* Grey for past slots/bookings */
+            --past-slot-text: #999;
+            --past-slot-border: #ccc;
 
-            /* NOVO: Cores para "Terminando em Breve" (vermelho pulsante) */
-            --slot-ending-soon-bg-from: rgba(248, 215, 218, 0.7); /* Vermelho claro com transparência */
-            --slot-ending-soon-bg-to: rgba(231, 153, 153, 0.8); /* Um pouco mais opaco no pulso */
-            --slot-ending-soon-border: rgba(244, 67, 54, 0.6); /* Borda vermelha mais forte */
-            --slot-ending-soon-text: #721c24; /* Texto vermelho escuro */
+            /* NEW: Distinct classes for alerts */
+            --slot-playing-active-bg: #d4edda; /* A softer green for active play */
+            --slot-playing-active-text: #155724;
+            --slot-playing-active-border: #28a745;
 
-            --slot-past-bg: rgba(240, 240, 240, 0.5);
-            --slot-past-border: rgba(204, 204, 204, 0.7);
-            --slot-past-text: #999;
+            --slot-ending-soon-yellow-bg: #fff3cd; /* Yellow for ending soon */
+            --slot-ending-soon-yellow-text: #856404;
+            --slot-ending-soon-yellow-border: #ffc107;
 
-            /* NOVO: Cores para bloqueios na TV */
-            --block-booking-tv-bg: rgba(224, 187, 228, 0.6); /* Lilac/Purple with transparency */
-            --block-booking-tv-text: #6a0572;
-            --block-booking-tv-border: rgba(187, 126, 194, 0.8);
+            --slot-ending-soon-red-bg: #f8d7da; /* Red for time out */
+            --slot-ending-soon-red-text: #721c24;
+            --slot-ending-soon-red-border: #dc3545;
+
+            /* General message styles if needed */
+            --message-success-bg: #d4edda;
+            --message-success-text: #155724;
+            --message-error-bg: #f8d7da;
+            --message-error-text: #721c24;
+
+            /* Cores para o alerta de próximo agendamento */
+            --alert-next-booking-bg-from: rgba(220, 53, 69, 0.9); /* Vermelho avermelhado mais opaco */
+            --alert-next-booking-bg-to: rgba(255, 99, 71, 0.9); /* Laranja avermelhado mais opaco */
+            --alert-next-booking-text: white;
+            --alert-next-booking-highlight: #FFD700; /* Dourado para destaque */
+
+            /* Variáveis para alturas dinâmicas (serão definidas por JS no body) */
+            --navbar-dynamic-height: 0px; 
+            --alert-area-dynamic-height: 0px; 
+            --dashboard-horizontal-padding: 20px; /* Padding lateral fixo para o dashboard */
         }
-        
+
+        html, body {
+            height: 100%; /* Garante que html e body ocupem 100% da viewport */
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Controla o overflow no nível mais alto */
+        }
+
         body {
             font-family: Arial, sans-serif;
             background-color: var(--color-background-offwhite);
-            height: 100vh;
-            overflow: hidden;
             color: var(--color-text-darkgray);
             display: flex;
             flex-direction: column;
+            /* Padding dinâmico para criar espaço para os elementos fixos */
+            padding-top: var(--navbar-dynamic-height); 
+            padding-bottom: var(--alert-area-dynamic-height);
         }
 
-        .dashboard {
-            height: 100vh;
-            padding: 20px;
+        .navbar {
+            position: fixed; /* Fixa a barra de navegação no topo */
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding: 10px 0; /* Padding interno */
+            background-color: var(--color-card-background);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            z-index: 101; /* Garante que fique acima de outros elementos */
+            flex-shrink: 0; /* Impede que a navbar encolha */
+        }
+        .navbar a {
+            padding: 6px 12px;
+            text-decoration: none;
+            color: var(--color-blue-info);
+            font-weight: bold;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            font-size: 0.9em;
+            margin: 0 5px;
+        }
+        .navbar a:hover {
+            background-color: var(--color-background-offwhite);
+        }
+        .navbar a.active {
+            background-color: var(--color-primary-green);
+            color: white;
+        }
+
+        .dashboard-container {
+            flex: 1; /* Ocupa todo o espaço vertical restante entre navbar e alerta */
             display: flex;
             flex-direction: column;
-            max-width: 1920px;
-            margin: auto;
-            position: relative;
+            width: 100%; /* Ocupa a largura total do body */
+            padding: var(--dashboard-horizontal-padding); /* Padding lateral */
+            overflow-y: auto; /* Permite rolagem vertical no container principal se o conteúdo for muito alto */
         }
 
         .header {
@@ -94,7 +150,7 @@
             padding: 15px 25px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             color: var(--color-text-darkgray);
-            position: relative;
+            flex-shrink: 0; /* Impede que o cabeçalho encolha */
         }
 
         .header h1 {
@@ -111,83 +167,16 @@
             font-weight: 400;
             color: var(--color-text-darkgray);
         }
-        .navbar {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid var(--color-border-beige);
-            padding-bottom: 10px;
-            opacity: 1;
-            transition: opacity 0.5s ease-out;
-            pointer-events: auto;
-            position: relative;
-            z-index: 10;
-        }
-        .navbar.hidden-navbar {
-            opacity: 0;
-            pointer-events: none;
-        }
-        .navbar a {
-            padding: 10px 20px;
-            text-decoration: none;
-            color: var(--color-blue-info);
-            font-weight: bold;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
-        .navbar a:hover {
-            background-color: var(--color-background-offwhite);
-        }
-        .navbar a.active {
-            background-color: var(--color-primary-green);
-            color: white;
-        }
-
-        .user-info {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 10px 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            color: var(--color-text-darkgray);
-            font-size: 0.9em;
-            font-weight: bold;
-            z-index: 5;
-            backdrop-filter: blur(3px);
-            border: 1px solid var(--color-border-beige);
-            opacity: 1;
-            transition: opacity 0.5s ease-out;
-            pointer-events: auto;
-        }
-        .user-info.hidden-navbar {
-            opacity: 0;
-            pointer-events: none;
-        }
-        .user-info span {
-            display: block;
-            margin-bottom: 3px;
-        }
-        .user-info span:last-child {
-            margin-bottom: 0;
-        }
-        .user-info .role {
-            font-size: 0.85em;
-            color: #666;
-            font-weight: normal;
-        }
 
         .quadras-grid {
-            flex: 1;
+            flex: 1; /* Ocupa todo o espaço vertical restante dentro do dashboard-container */
             display: flex;
-            flex-wrap: nowrap;
+            flex-wrap: nowrap; /* Garante que as quadras fiquem em uma única linha */
             gap: 15px;
-            padding-bottom: 20px;
-            overflow-x: auto;
-            overflow-y: hidden;
-            max-height: calc(100vh - 150px);
-            align-items: flex-start;
+            overflow-x: auto; /* Permite rolagem horizontal para as quadras */
+            overflow-y: hidden; /* Evita rolagem vertical na grade de quadras */
+            align-items: stretch; /* Garante que as quadras se estiquem para preencher a altura */
+            justify-content: space-around; /* Alinha as quadras distribuindo o espaço igualmente */
         }
 
         .quadra {
@@ -199,9 +188,8 @@
             display: flex;
             flex-direction: column;
             transition: none;
-            min-width: 200px;
-            flex-shrink: 0;
-            height: 100%;
+            flex: 1; /* Permite que as quadras cresçam e se distribuam igualmente */
+            height: 100%; /* Ocupa a altura total disponível no flex container (quadras-grid) */
         }
 
         .quadra-header {
@@ -215,7 +203,6 @@
             font-size: 1.3rem;
             font-weight: 700;
             margin-bottom: 8px;
-            text-shadow: none;
             color: var(--color-text-darkgray);
         }
 
@@ -227,20 +214,20 @@
         }
 
         .status-livre {
-            background-color: var(--color-tag-bg);
-            color: var(--color-tag-text);
-            border: 1px solid var(--color-lighter-green-action);
+            background-color: var(--tv-free-bg);
+            color: var(--tv-free-text);
+            border: 1px solid var(--tv-free-border);
         }
 
         .status-ocupada {
-            background-color: var(--slot-occupied-bg);
-            color: var(--slot-occupied-text);
-            border: 1px solid var(--slot-occupied-border);
+            background-color: var(--tv-booked-bg);
+            color: var(--tv-booked-text);
+            border: 1px solid var(--tv-booked-border);
         }
 
         .horarios-container {
             flex: 1;
-            overflow-y: auto;
+            overflow-y: auto; /* Permite rolagem vertical para os slots dentro de cada quadra */
             padding-right: 5px;
         }
 
@@ -256,60 +243,69 @@
             font-weight: 500;
             text-align: center;
             line-height: 1.3;
+            transition: background-color 0.5s ease-in-out, box-shadow 0.5s ease-in-out;
         }
 
         /* Cores de fundo com transparência mais suave (mantidas as cores originais, mas com variáveis) */
         .slot-livre {
-            background-color: var(--slot-free-bg);
-            border: 1px solid var(--slot-free-border);
-            color: var(--slot-free-text);
+            background-color: var(--tv-free-bg);
+            border: 1px solid var(--tv-free-border);
+            color: var(--tv-free-text);
         }
 
-        .slot-ocupado { /* Agendamentos Futuros (azul) */
-            background-color: var(--slot-occupied-bg);
-            border: 1px solid var(--slot-occupied-border);
-            color: var(--slot-occupied-text);
-            animation: none; /* Sem animação para agendados futuros */
+        .slot-ocupado {
+            background-color: var(--tv-booked-bg);
+            border: 1px solid var(--tv-booked-border);
+            color: var(--tv-booked-text);
         }
 
-        .slot-playing-active { /* NOVO: Agendamentos "Em Jogo" (verde escuro) */
+        .horario-slot.slot-playing-active { /* Usado para "Em Andamento" */
             background-color: var(--slot-playing-active-bg);
             border: 1px solid var(--slot-playing-active-border);
             color: var(--slot-playing-active-text);
-            box-shadow: none;
-            animation: none;
+            box-shadow: 0 0 8px rgba(40, 167, 69, 0.3); /* Greenish shadow */
+            animation: none; /* No pulse for just playing */
         }
 
-        .slot-ending-soon { /* NOVO: Agendamentos "Terminando em Breve" (vermelho pulsante) */
-            background-color: var(--slot-ending-soon-bg-from);
-            border: 1px solid var(--slot-ending-soon-border);
-            color: var(--slot-ending-soon-text);
-            box-shadow: none;
-            animation: pulse-red-alert 1.5s infinite alternate ease-in-out;
+        .horario-slot.slot-ending-soon-yellow { /* Usado para "Atenção!" (fim próximo) */
+            background-color: var(--slot-ending-soon-yellow-bg);
+            border: 1px solid var(--slot-ending-soon-yellow-border);
+            color: var(--slot-ending-soon-yellow-text);
+            box-shadow: 0 0 8px rgba(255, 193, 7, 0.3);
+            animation: pulse-yellow 1.5s infinite alternate ease-in-out;
         }
 
-        .block-booking-tv { /* NOVO: Bloqueios (lilás/roxo) */
-            background-color: var(--block-booking-tv-bg);
-            border: 1px solid var(--block-booking-tv-border);
-            color: var(--block-booking-tv-text);
-            box-shadow: none;
-            animation: none;
+        .horario-slot.slot-ending-soon-red { /* Usado para "Tempo Esgotado!" (acabou de terminar ou está muito próximo) */
+            background-color: var(--slot-ending-soon-red-bg);
+            border: 1px solid var(--slot-ending-soon-red-border);
+            color: var(--slot-ending-soon-red-text);
+            box-shadow: 0 0 8px rgba(244, 67, 54, 0.3);
+            animation: pulse-red 1.5s infinite alternate ease-in-out;
+        }
+
+        .block-booking-tv { /* Usado para bloqueios */
+            background-color: var(--block-booking-bg);
+            border: 1px solid var(--block-booking-border);
+            color: var(--block-booking-text);
             font-style: italic;
         }
 
-        .past-slot {
-            background-color: var(--slot-past-bg);
-            border: 1px solid var(--slot-past-border);
-            color: var(--slot-past-text);
+        .slot-passado { /* Usado para agendamentos passados */
+            background-color: var(--past-slot-bg);
+            border: 1px solid var(--past-slot-border);
+            color: var(--past-slot-text);
             font-style: italic;
             opacity: 0.7;
             box-shadow: none;
         }
 
-        /* Animação de pulso para vermelho */
-        @keyframes pulse-red-alert {
-            0% { box-shadow: 0 0 8px rgba(244, 67, 54, 0.2); background-color: var(--slot-ending-soon-bg-from); }
-            100% { box-shadow: 0 0 12px rgba(244, 67, 54, 0.4); background-color: var(--slot-ending-soon-bg-to); }
+        @keyframes pulse-yellow {
+            0% { box-shadow: 0 0 8px rgba(255, 193, 7, 0.2); }
+            100% { box-shadow: 0 0 12px rgba(255, 193, 7, 0.4); }
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 8px rgba(244, 67, 54, 0.2); }
+            100% { box-shadow: 0 0 12px rgba(244, 67, 54, 0.4); }
         }
 
         .cliente-nome {
@@ -324,28 +320,27 @@
         }
         
         .legend {
-            position: absolute;
-            bottom: 20px;
+            position: fixed; /* Fixa a legenda no topo direito */
+            top: 20px;
             right: 20px;
             display: flex;
-            gap: 20px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
             background: rgba(0, 0, 0, 0.6);
             padding: 12px 25px;
-            border-radius: 25px;
+            border-radius: 15px;
             backdrop-filter: blur(5px);
             color: white;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            opacity: 1;
-            transition: none;
-            pointer-events: auto;
-            z-index: 100;
+            z-index: 99; /* Garante que fique acima da grid, mas abaixo do alerta */
         }
 
         .legend-item {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: 400;
         }
 
@@ -357,14 +352,12 @@
         }
 
         /* Cores da legenda */
-        .legend-livre { background-color: #e6ffe6; }
-        .legend-ocupado { background-color: #cceeff; }
-        .legend-atual { background-color: #fff3cd; } /* Este será o amarelo, para a legenda de "Em Andamento" se necessário ou pode ser removido da legenda se não for mais um status primário */
-        /* NOVO: Cores da legenda para os novos status */
-        .legend-playing-active { background-color: var(--slot-playing-active-bg); border-color: var(--slot-playing-active-border); }
-        .legend-ending-soon { background-color: var(--slot-ending-soon-bg-from); border-color: var(--slot-ending-soon-border); }
-        .legend-block-booking { background-color: var(--block-booking-tv-bg); border-color: var(--block-booking-tv-border); }
-
+        .legend-livre { background-color: var(--tv-free-bg); }
+        .legend-ocupado { background-color: var(--tv-booked-bg); }
+        .legend-atual { background-color: var(--slot-playing-active-bg); }
+        .legend-atencao { background-color: var(--slot-ending-soon-yellow-bg); }
+        .legend-fim-proximo { background-color: var(--slot-ending-soon-red-bg); }
+        .legend-bloqueado { background-color: var(--block-booking-bg); }
 
         /* Scrollbar customizada */
         .horarios-container::-webkit-scrollbar {
@@ -381,39 +374,85 @@
         .horarios-container::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.5);
         }
+
+        /* Contêiner para múltiplos alertas de próximo agendamento */
+        .next-booking-alerts-container {
+            position: fixed; /* Fixa no rodapé */
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+            background-color: rgba(255, 255, 255, 0.95); /* Fundo quase totalmente branco */
+            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            gap: 8px;
+            display: none; /* Escondido por padrão, mostrado por JS */
+            flex-shrink: 0; /* Impede que o contêiner de alerta encolha */
+            max-height: 120px; /* Limita a altura máxima para o contêiner de alertas */
+            overflow-y: auto; /* Adiciona rolagem se houver muitos alertas */
+        }
+
+        /* Estilo para cada alerta individual */
+        .next-booking-alert-item {
+            background-color: var(--alert-next-booking-bg-from);
+            color: var(--alert-next-booking-text);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 90%;
+            max-width: 800px;
+            animation: blink-alert 1s infinite alternate;
+            gap: 10px;
+        }
+
+        .next-booking-alert-item .alert-label,
+        .next-booking-alert-item .start-time,
+        .next-booking-alert-item .players-list {
+            color: var(--alert-next-booking-text);
+        }
+
+        .next-booking-alert-item .court-name {
+            color: var(--alert-next-booking-highlight);
+        }
+
+        @keyframes blink-alert {
+            from { background-color: var(--alert-next-booking-bg-from); }
+            to { background-color: var(--alert-next-booking-bg-to); }
+        }
     </style>
 </head>
 <body>
-    <div class="dashboard">
-        <div class="header">
-            <h1>🏸 Centro Esportivo - Agendamento de Quadras</h1>
-            <div class="current-time" id="currentTime"></div>
-            {% if g.user %}
-            <div class="user-info" id="userInfo">
-                <span>Olá, {{ g.user.username | capitalize }}!</span>
-                <span class="role">Perfil: {{ g.user.role | capitalize }}</span>
-            </div>
-            {% endif %}
-        </div>
-        <div class="navbar" id="mainNavbar">
-            {% if g.user and (g.user.role == 'admin' or g.user.role == 'operator') %}
-            <a href="{{ url_for('index') }}">Agendamento</a>
-            {% endif %}
-            {% if g.user and (g.user.role == 'admin' or g.user.role == 'viewer') %}
-            <a href="{{ url_for('tv_view') }}" class="active">Visão TV</a>
-            {% endif %}
-            {% if g.user and g.user.role == 'admin' %}
-            <a href="{{ url_for('admin_panel') }}">Administração</a>
-            <a href="{{ url_for('statistics_panel') }}">Estatísticas</a>
-            {% endif %}
-            {% if g.user %}
-            <a href="{{ url_for('logout') }}" style="background-color: var(--color-red-delete); color: white;">Sair</a>
-            {% endif %}
-        </div>
-        
-        <div class="quadras-grid" id="quadrasGrid"></div>
+    <div class="navbar" id="mainNavbar">
+        <a href="{{ url_for('index') }}">Agendamento</a>
+        {% if g.user and (g.user.role == 'admin' or g.user.role == 'viewer') %}
+        <a href="{{ url_for('tv_view') }}" class="active">Visão TV</a>
+        {% endif %}
+        {% if g.user and g.user.role == 'admin' %}
+        <a href="{{ url_for('admin_panel') }}">Administração</a>
+        <a href="{{ url_for('statistics_panel') }}">Estatísticas</a>
+        {% endif %}
+        {% if g.user %}
+        <a href="{{ url_for('logout') }}" style="background-color: var(--color-red-delete); color: white;">Sair</a>
+        {% endif %}
+    </div>
 
-        <div class="legend" id="dashboardLegend">
+    <div class="dashboard-container" id="dashboardContainer">
+        <div class="header">
+            <h1>Visão TV - Marcação de Quadras</h1>
+            <div class="current-time" id="currentTime"></div>
+        </div>
+        <div class="quadras-grid" id="tvViewGrid">
+            <!-- Conteúdo das quadras será populado via JavaScript -->
+            <p style="text-align: center; color: var(--color-text-darkgray);">Carregando agendamentos para a Visão TV...</p>
+        </div>
+        <div class="legend">
             <div class="legend-item">
                 <div class="legend-color legend-livre"></div>
                 <span>Disponível</span>
@@ -423,19 +462,28 @@
                 <span>Agendado</span>
             </div>
             <div class="legend-item">
-                <div class="legend-color legend-playing-active"></div>
-                <span>Em Jogo</span>
+                <div class="legend-color legend-atual"></div>
+                <span>Em Andamento</span>
             </div>
             <div class="legend-item">
-                <div class="legend-color legend-ending-soon"></div>
-                <span>Finalizando</span>
+                <div class="legend-color legend-atencao"></div>
+                <span>Atenção! (Fim Próximo)</span>
             </div>
             <div class="legend-item">
-                <div class="legend-color legend-block-booking"></div>
+                <div class="legend-color legend-fim-proximo"></div>
+                <span>Tempo Esgotado!</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-bloqueado"></div>
                 <span>Bloqueado</span>
             </div>
         </div>
     </div>
+    <!-- Contêiner para múltiplos alertas de próximo agendamento -->
+    <div id="nextBookingAlertsContainer" class="next-booking-alerts-container">
+        <!-- Alertas individuais serão preenchidos pelo JavaScript aqui -->
+    </div>
+
     <script>
         // Função para atualizar a hora atual no cabeçalho
         function updateCurrentTime() {
@@ -454,30 +502,107 @@
             document.getElementById('currentTime').textContent = `${dateString} - ${timeString}`;
         }
 
-        // Função para renderizar todas as quadras a partir dos dados da API
-        async function renderQuadrasFromAPI() {
-            const grid = document.getElementById('quadrasGrid');
-            grid.innerHTML = '<p style="text-align: center; color: var(--color-text-darkgray);">Carregando agendamentos...</p>';
+        // Função para encontrar todos os agendamentos relevantes para o alerta
+        function findNextBookingsForAlert(courtsData) {
+            const now = new Date();
+            const relevantBookings = [];
+
+            courtsData.forEach(court => {
+                court.agendamentos.forEach(slot => {
+                    const slotStartTime = new Date(slot.startTime);
+                    
+                    // Janela do alerta: 5 minutos antes do início até 1 minuto após o início
+                    const alertWindowStart = new Date(slotStartTime.getTime() - (5 * 60 * 1000)); // 5 minutos antes
+                    const alertWindowEnd = new Date(slotStartTime.getTime() + (1 * 60 * 1000)); // 1 minuto após
+
+                    // Verifica se 'now' está dentro desta janela de alerta
+                    if (now >= alertWindowStart && now <= alertWindowEnd) {
+                        relevantBookings.push({
+                            courtName: court.nome,
+                            startTime: slotStartTime,
+                            players: slot.raw_players,
+                            blockReason: slot.raw_block_reason,
+                            isBlockBooking: slot.type === 'blocked'
+                        });
+                    }
+                });
+            });
+            // Ordena por horário de início para exibir cronologicamente
+            relevantBookings.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+            return relevantBookings;
+        }
+
+        // Função para atualizar a exibição do alerta de próximo agendamento
+        function updateNextBookingAlertDisplay(nextBookings) {
+            const alertsContainer = document.getElementById('nextBookingAlertsContainer');
+            const navbar = document.getElementById('mainNavbar');
+
+            alertsContainer.innerHTML = ''; // Limpa alertas existentes
+
+            if (nextBookings.length > 0) {
+                nextBookings.forEach(nextBooking => {
+                    const alertItem = document.createElement('div');
+                    alertItem.className = 'next-booking-alert-item';
+
+                    const playersOrReason = nextBooking.isBlockBooking 
+                        ? nextBooking.blockReason 
+                        : nextBooking.players.join(', ');
+
+                    alertItem.innerHTML = `
+                        <span class="alert-label">Próximo Agendamento:</span> 
+                        <span class="court-name">${nextBooking.courtName}</span> - 
+                        <span class="start-time">${nextBooking.startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span class="players-list">(${playersOrReason})</span>
+                    `;
+                    alertsContainer.appendChild(alertItem);
+                });
+                alertsContainer.style.display = 'flex'; // Mostra o contêiner
+            } else {
+                alertsContainer.style.display = 'none'; // Esconde o contêiner
+            }
+
+            // Atualiza as variáveis CSS no elemento <html> para ajustar o padding do body
+            const navbarHeight = navbar.offsetHeight;
+            // Garante que alertsContainer.offsetHeight seja 0 se display for 'none'
+            const alertContainerHeight = alertsContainer.offsetHeight; 
+
+            document.documentElement.style.setProperty('--navbar-dynamic-height', `${navbarHeight}px`);
+            document.documentElement.style.setProperty('--alert-area-dynamic-height', `${alertContainerHeight}px`);
+        }
+
+        // Função para buscar e renderizar os dados do dashboard
+        async function loadAndRenderTvViewData() {
+            const tvViewGrid = document.getElementById('tvViewGrid');
+            tvViewGrid.innerHTML = '<p style="text-align: center; color: var(--color-text-darkgray);">Carregando agendamentos para a Visão TV...</p>';
 
             try {
                 const response = await fetch('/api/dashboard_data');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const quadrasData = await response.json();
+                const courtsData = await response.json();
                 
-                grid.innerHTML = '';
+                tvViewGrid.innerHTML = ''; // Limpa a mensagem de carregamento
 
-                quadrasData.forEach(quadra => {
+                const courtsOrder = ["QUADRA 1", "QUADRA 2", "QUADRA 3", "QUADRA 4", "QUADRA 5", "QUADRA 6", "QUADRA 7"];
+
+                courtsOrder.forEach(courtName => {
+                    const court = courtsData.find(q => q.nome === courtName);
+                    
                     const quadraEl = document.createElement('div');
                     quadraEl.className = 'quadra';
-                                        
+                    
                     let horariosHtml = '';
-                    if (quadra.agendamentos && quadra.agendamentos.length > 0) {
-                        quadra.agendamentos.forEach(slot => {
-                            horariosHtml += `<div class="horario-slot ${slot.status_class}">${slot.content}</div>`;
+                    if (court && court.agendamentos && court.agendamentos.length > 0) {
+                        court.agendamentos.forEach(slot => {
+                            horariosHtml += `
+                                <div class="horario-slot ${slot.status_class}">
+                                    ${slot.content}
+                                </div>
+                            `;
                         });
                     } else {
+                        // Caso não haja agendamentos para a quadra, mostra um slot "Dia Todo"
                         horariosHtml = `
                             <div class="horario-slot slot-livre">
                                 <span class="horario-time">Dia Todo</span>
@@ -488,73 +613,46 @@
 
                     quadraEl.innerHTML = `
                         <div class="quadra-header">
-                            <div class="quadra-title">${quadra.nome}</div>
-                            <div class="quadra-status ${quadra.status === 'livre' ? 'status-livre' : 'status-ocupada'}">
-                                ${quadra.status === 'livre' ? 'Disponível' : 'Em Uso'}
+                            <div class="quadra-title">${courtName}</div>
+                            <div class="quadra-status ${court.status === 'livre' ? 'status-livre' : 'status-ocupada'}">
+                                ${court.status === 'livre' ? 'Disponível' : 'Em Uso'}
                             </div>
                         </div>
                         <div class="horarios-container">
                             ${horariosHtml}
                         </div>
                     `;
-                    grid.appendChild(quadraEl);
+                    tvViewGrid.appendChild(quadraEl);
                 });
+
+                // Atualiza o alerta de próximo agendamento após renderizar a grade
+                const nextBookings = findNextBookingsForAlert(courtsData);
+                updateNextBookingAlertDisplay(nextBookings);
+
             } catch (error) {
-                console.error('Erro ao buscar dados da dashboard:', error);
-                grid.innerHTML = `<p style="text-align: center; color: var(--color-red-delete);">Erro ao carregar agendamentos: ${error.message}. Por favor, recarregue a página.</p>`;
+                console.error('Erro ao carregar dados da Visão TV:', error);
+                tvViewGrid.innerHTML = `<p style="text-align: center; color: var(--message-error-text);">Erro ao carregar dados da Visão TV: ${error.message}. Por favor, recarregue a página.</p>`;
+                // Esconde o alerta em caso de erro
+                document.getElementById('nextBookingAlertsContainer').style.display = 'none';
             }
         }
 
-        // --- Inactivity Timer for Navbar and User Info ---
-        const mainNavbar = document.getElementById('mainNavbar');
-        const userInfo = document.getElementById('userInfo');
-        let inactivityTimeout;
-        const INACTIVITY_TIME = 5000; // 5 seconds
-
-        function hideControls() {
-            mainNavbar.classList.add('hidden-navbar');
-            if (userInfo) {
-                userInfo.classList.add('hidden-navbar');
-            }
-        }
-
-        function showControls() {
-            mainNavbar.classList.remove('hidden-navbar');
-            if (userInfo) {
-                userInfo.classList.remove('hidden-navbar');
-            }
-            resetInactivityTimer();
-        }
-
-        function resetInactivityTimer() {
-            clearTimeout(inactivityTimeout);
-            inactivityTimeout = setTimeout(hideControls, INACTIVITY_TIME);
-        }
-
-        // Add event listeners for user activity
-        document.addEventListener('mousemove', showControls);
-        document.addEventListener('keydown', showControls);
-        document.addEventListener('click', showControls);
-
-
-        // Função de inicialização da dashboard
-        function init() {
-            updateCurrentTime();
-            renderQuadrasFromAPI();
-
-            setInterval(() => {
-                updateCurrentTime();
-                if (Date.now() % 30000 < 1000) {
-                     renderQuadrasFromAPI(); 
-                }
-            }, 1000);
-
-            resetInactivityTimer();
-        }
-
-        // Inicializar quando a página carregar
+        // Inicialização e atualização periódica
         window.addEventListener('load', () => {
-            init();
+            updateCurrentTime();
+            // Atualiza a hora a cada segundo
+            setInterval(updateCurrentTime, 1000); 
+            
+            // Carrega os dados do agendamento e o alerta inicialmente
+            loadAndRenderTvViewData(); 
+            // Atualiza os dados do agendamento e o alerta a cada 10 segundos
+            setInterval(loadAndRenderTvViewData, 10000); 
+        });
+
+        // Adiciona um listener para o evento resize para recalcular as alturas
+        window.addEventListener('resize', () => {
+            // Re-chama a função para recalcular e aplicar as alturas
+            loadAndRenderTvViewData(); 
         });
     </script>
 </body>

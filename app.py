@@ -874,22 +874,22 @@ def api_dashboard_data():
                     slot_status_class = 'block-booking-tv' # Classe específica para bloqueio
                 elif booking_status_from_logic == 'playing':
                     slot_status_class = 'slot-playing-active' # Classe para "em jogo"
-                elif booking_status_from_logic == 'alert-yellow' or booking_status_from_logic == 'alert-red':
-                    slot_status_class = 'slot-ending-soon' # Para alert-yellow e alert-red
+                elif booking_status_from_logic == 'alert-yellow': # Specific for yellow alert
+                    slot_status_class = 'slot-ending-soon-yellow' 
+                elif booking_status_from_logic == 'alert-red': # Specific for red alert
+                    slot_status_class = 'slot-ending-soon-red'
                 elif booking_status_from_logic == 'confirmed':
                     slot_status_class = 'slot-ocupado'
                 elif booking_status_from_logic == 'faded-past':
-                    # Este status é para agendamentos passados, mas já filtramos para endTime > now
-                    # Então, este caso idealmente não deve ser atingido, a menos que um agendamento tenha acabado de terminar.
                     slot_status_class = 'slot-passado' 
 
                 players_or_reason = (', '.join(booking['players']) if not booking['isBlockBooking'] 
                                          else booking['blockBookingReason'])
 
-                # MODIFICADO: Inclui a data no formato DD/MM
+                # MODIFICADO: Remove a data, exibe apenas o horário
                 content_html = (
                     f"<span class='cliente-nome'>{players_or_reason}</span>"
-                    f"<br><span class='horario-time'>{booking['startTime'].strftime('%d/%m %H:%M')} - {booking['endTime'].strftime('%H:%M')}</span>"
+                    f"<br><span class='horario-time'>{booking['startTime'].strftime('%H:%M')} - {booking['endTime'].strftime('%H:%M')}</span>"
                 )
 
                 court_display_slots.append({
@@ -897,7 +897,9 @@ def api_dashboard_data():
                     'endTime': booking['endTime'].isoformat(),
                     'content': content_html,
                     'status_class': slot_status_class,
-                    'type': 'booked' if not booking['isBlockBooking'] else 'blocked'
+                    'type': 'booked' if not booking['isBlockBooking'] else 'blocked',
+                    'raw_players': booking['players'] if not booking['isBlockBooking'] else [], # Add raw players
+                    'raw_block_reason': booking['blockBookingReason'] if booking['isBlockBooking'] else "" # Add raw block reason
                 })
 
             # Determina o status geral da quadra (livre/ocupada) para o cabeçalho
