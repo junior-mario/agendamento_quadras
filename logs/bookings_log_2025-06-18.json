@@ -1,0 +1,18 @@
+[
+    {
+        "timestamp": "2025-06-18T08:50:29.772950",
+        "event_type": "booked",
+        "booking_info": {
+            "courtId": "QUADRA 1",
+            "startTime": "2025-06-18T08:55:00",
+            "endTime": "2025-06-18T09:45:00",
+            "players": [
+                "lucas",
+                "mario"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    }
+]

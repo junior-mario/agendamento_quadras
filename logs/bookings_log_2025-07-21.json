@@ -1,0 +1,31 @@
+[
+    {
+        "timestamp": "2025-07-21T17:42:09.027840",
+        "event_type": "booked",
+        "booking_info": {
+            "courtId": "QUADRA 2",
+            "startTime": "2025-07-21T17:45:00",
+            "endTime": "2025-07-21T18:35:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-21T17:44:33.762179",
+        "event_type": "blocked",
+        "booking_info": {
+            "courtId": "QUADRA 1",
+            "startTime": "2025-07-21T17:44:00",
+            "endTime": "2025-07-21T19:44:00",
+            "players": [],
+            "isBlockBooking": true,
+            "blockBookingReason": "texto de bloqueio"
+        },
+        "performed_by": "admin"
+    }
+]

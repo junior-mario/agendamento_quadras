@@ -1,0 +1,663 @@
+<!-- templates/admin.html -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marcação de Quadras - Administração</title>
+    <style>
+        /* Definição da Paleta de Cores */
+        :root {
+            --color-primary-green: #355E3B; /* Um verde floresta/pinho */
+            --color-darker-green-hover: #2D4C3A;
+            --color-lighter-green-action: #5BA85C;
+            --color-even-lighter-green-hover: #4F9A51;
+            
+            --color-red-delete: #C74B4B;
+            --color-darker-red-hover: #B03A3A;
+            
+            --color-yellow-archive: #E6B300;
+            --color-darker-yellow-hover: #CC9900;
+            
+            --color-blue-info: #3498db; /* Azul para informação/ação */
+            --color-darker-blue-info-hover: #2A7ABA;
+
+            --color-background-offwhite: #F8F5F0; /* Fundo um off-white/bege suave */
+            --color-text-darkgray: #4A4A4A; /* Texto em cinza escuro sofisticado */
+            --color-card-background: #ffffff; /* Cartões em branco puro para contraste */
+            --color-border-beige: #E0D8CC; /* Borda bege/light brown */
+            --color-input-border: #D1C7B7;
+
+            --message-success-bg: #d4edda;
+            --message-success-text: #155724;
+            --message-error-bg: #f8d7da;
+            --message-error-text: #721c24;
+            
+            /* Cores específicas de status de agendamento na tabela */
+            --status-confirmed-bg: #d4edda; /* Verde claro */
+            --status-confirmed-text: #155724;
+            --status-playing-bg: #cceeff; /* Azul claro */
+            --status-playing-text: #0056b3;
+            --status-alert-yellow-bg: #fff3cd; /* Amarelo */
+            --status-alert-yellow-text: #856404;
+            --status-alert-red-bg: #f8d7da; /* Vermelho */
+            --status-alert-red-text: #721c24;
+            --status-block-booking-bg: #e0bbe4; /* Lilás/Roxo */
+            --status-block-booking-text: #6a0572;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--color-background-offwhite);
+            color: var(--color-text-darkgray);
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background-color: var(--color-card-background);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 {
+            color: var(--color-primary-green);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .navbar {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--color-border-beige);
+            padding-bottom: 10px;
+        }
+        .navbar a {
+            padding: 10px 20px;
+            text-decoration: none;
+            color: var(--color-blue-info);
+            font-weight: bold;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .navbar a:hover {
+            background-color: var(--color-background-offwhite);
+        }
+        .navbar a.active {
+            background-color: var(--color-primary-green);
+            color: white;
+        }
+        .section-card {
+            background-color: var(--color-background-offwhite); /* Fundo um pouco mais escuro para seções */
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+        }
+        .form-group {
+            margin-bottom: 15px;
+            display: flex; /* Para alinhar input e botão de log */
+            align-items: center; /* Alinha verticalmente */
+            gap: 10px; /* Espaço entre os elementos */
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--color-text-darkgray);
+            flex-shrink: 0; /* Impede que o label encolha */
+        }
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group input[type="time"],
+        .form-group input[type="date"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%; /* Permite que o input de data ocupe o espaço restante */
+            padding: 10px;
+            border: 1px solid var(--color-input-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1em;
+            color: var(--color-text-darkgray);
+            background-color: var(--color-card-background);
+        }
+        .button-group {
+            text-align: right;
+            margin-top: 15px;
+        }
+        .button-group button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-left: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button-group button.submit {
+            background-color: var(--color-primary-green);
+            color: white;
+        }
+        .button-group button.submit:hover {
+            background-color: var(--color-darker-green-hover);
+        }
+        .button-group button.cancel { /* Usado para botões de limpar/voltar */
+            background-color: #6c757d; /* Cinza escuro */
+            color: white;
+        }
+        .button-group button.cancel:hover {
+            background-color: #5a6268;
+        }
+        .message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .message.success {
+            background-color: var(--message-success-bg);
+            color: var(--message-success-text);
+        }
+        .message.error {
+            background-color: var(--message-error-bg);
+            color: var(--message-error-text);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: var(--color-card-background);
+            border-radius: 8px;
+            overflow: hidden; /* Para border-radius funcionar na tabela */
+        }
+        th, td {
+            border: 1px solid var(--color-border-beige);
+            padding: 12px;
+            text-align: left;
+            font-size: 0.9em;
+            color: var(--color-text-darkgray);
+        }
+        th {
+            background-color: var(--color-primary-green);
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9; /* Um cinza bem claro para linhas pares */
+        }
+        .status-tag {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 0.8em;
+            display: inline-block; /* Para que o padding e border-radius funcionem bem */
+        }
+        .status-confirmed {
+            background-color: var(--status-confirmed-bg);
+            color: var(--status-confirmed-text);
+        }
+        .status-playing {
+            background-color: var(--status-playing-bg);
+            color: var(--status-playing-text);
+        }
+        .status-alert-yellow {
+            background-color: var(--status-alert-yellow-bg);
+            color: var(--status-alert-yellow-text);
+        }
+        .status-alert-red {
+            background-color: var(--status-alert-red-bg);
+            color: var(--status-alert-red-text);
+        }
+        .status-block-booking {
+            background-color: var(--status-block-booking-bg);
+            color: var(--status-block-booking-text);
+        }
+        .action-button-table { /* Botões dentro da tabela */
+            background-color: var(--color-blue-info);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: background-color 0.2s ease;
+        }
+        .action-button-table:hover {
+            background-color: var(--color-darker-blue-info-hover);
+        }
+        .action-button-table.delete {
+            background-color: var(--color-red-delete);
+        }
+        .action-button-table.delete:hover {
+            background-color: var(--color-darker-red-hover);
+        }
+        .waiting-list-section { /* Esta classe será removida do HTML */
+            margin-top: 40px;
+        }
+        .add-waiting-list { /* Esta classe será removida do HTML */
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: flex-end;
+            margin-top: 15px;
+        }
+        .add-waiting-list .form-group { /* Esta classe será removida do HTML */
+            flex: 1;
+            min-width: 150px;
+            margin-bottom: 0;
+        }
+        .add-waiting-list button { /* Esta classe será removida do HTML */
+            flex-shrink: 0;
+            margin-top: 5px;
+        }
+
+        /* Estilo do modal (para o modal de edição de usuário) */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: var(--color-card-background);
+            padding: 30px;
+            border: 1px solid var(--color-border-beige);
+            width: 90%;
+            max-width: 500px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .close-button {
+            color: var(--color-text-darkgray);
+            float: right;
+            font-size: 32px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: var(--color-red-delete);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Marcação de Quadras - Administração</h1>
+
+        <div class="navbar">
+            {% if g.user and (g.user.role == 'admin' or g.user.role == 'operator') %}
+            <a href="{{ url_for('index') }}">Agendamento</a>
+            {% endif %}
+            {% if g.user and (g.user.role == 'admin' or g.user.role == 'viewer') %}
+            <a href="{{ url_for('tv_view') }}">Visão TV</a>
+            {% endif %}
+            {% if g.user and g.user.role == 'admin' %}
+            <a href="{{ url_for('admin_panel') }}" class="active">Administração</a>
+            <a href="{{ url_for('statistics_panel') }}">Estatísticas</a>
+            {% endif %}
+            {% if g.user %}
+            <a href="{{ url_for('logout') }}" style="background-color: var(--color-red-delete); color: white;">Sair</a>
+            {% endif %}
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="section-card">
+            <h2>Gerenciar Usuários</h2>
+            
+            <h3>Criar Novo Usuário</h3>
+            <form action="{{ url_for('admin_panel') }}" method="post">
+                <div class="form-group">
+                    <label for="new_username">Nome de Usuário:</label>
+                    <input type="text" id="new_username" name="new_username" required>
+                </div>
+                <div class="form-group">
+                    <label for="new_password">Senha:</label>
+                    <input type="password" id="new_password" name="new_password" required>
+                </div>
+                <div class="form-group">
+                    <label for="new_role">Perfil:</label>
+                    <select id="new_role" name="new_role" required>
+                        <option value="operator">Operador (Agendamento)</option>
+                        <option value="viewer">Visualizador (Visão TV)</option>
+                        <option value="admin">Administrador (Acesso Total)</option>
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button type="submit" name="create_user" class="submit">Criar Usuário</button>
+                </div>
+            </form>
+
+            <h3 style="margin-top: 30px;">Usuários Existentes</h3>
+            {% if all_users %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome de Usuário</th>
+                        <th>Perfil</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in all_users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.role.capitalize() }}</td>
+                        <td>
+                            <button class="action-button-table" 
+                                onclick="openEditUserModal({{ user.id }}, '{{ user.username }}', '{{ user.role }}')">Editar</button>
+                            <form action="{{ url_for('admin_panel') }}" method="post" style="display:inline-block;">
+                                <input type="hidden" name="delete_user_id" value="{{ user.id }}">
+                                <button type="submit" name="delete_user" class="action-button-table delete" 
+                                {% if user.id == g.user.id %}disabled title="Você não pode apagar sua própria conta"{% endif %}>Apagar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>Nenhum usuário cadastrado (exceto os padrões).</p>
+            {% endif %}
+        </div>
+
+        <div class="section-card">
+            <h2>Configurações do Agendamento</h2>
+            <form action="{{ url_for('admin_panel') }}" method="post">
+                <div class="form-group">
+                    <label for="new_duration">Duração Padrão do Agendamento (minutos):</label>
+                    <input type="number" id="new_duration" name="new_duration" value="{{ settings.bookingDurationMinutes }}" required min="10" step="5">
+                </div>
+                <div class="button-group">
+                    <button type="submit" name="update_duration" class="submit">Atualizar Duração</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="section-card">
+            <h2>Bloquear Quadra para Manutenção/Eventos</h2>
+            <form action="{{ url_for('admin_panel') }}" method="post">
+                <div class="form-group">
+                    <label for="block_court_id">Quadra:</label>
+                    <select id="block_court_id" name="block_court_id" required>
+                        {% for court in courts %}
+                            <option value="{{ court }}">{{ court }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="block_start_date">Data de Início:</label>
+                    <input type="date" id="block_start_date" name="block_start_date" value="{{ current_date }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="block_start_time">Hora de Início:</label>
+                    <input type="time" id="block_start_time" name="block_start_time" value="{{ current_time }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="block_end_date">Data de Término:</label>
+                    <input type="date" id="block_end_date" name="block_end_date" value="{{ current_date }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="block_end_time">Hora de Término:</label>
+                    <input type="time" id="block_end_time" name="block_end_time" value="{{ one_hour_later }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="block_reason">Motivo do Bloqueio:</label>
+                    <textarea id="block_reason" name="block_reason" rows="3" required></textarea>
+                </div>
+                <div class="button-group">
+                    <button type="submit" name="block_court" class="submit">Bloquear Quadra</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="section-card">
+            <h2>Agendamentos Atuais</h2>
+            {% if bookings %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Quadra</th>
+                        <th>Início</th>
+                        <th>Fim</th>
+                        <th>Integrantes/Motivo</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in bookings %}
+                    <tr>
+                        <td>{{ booking.id }}</td>
+                        <td>{{ booking.courtId }}</td>
+                        <td>{{ booking.startTime.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ booking.endTime.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if booking.isBlockBooking %}
+                                {{ booking.blockBookingReason }}
+                            {% else %}
+                                {{ ', '.join(booking.players) }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-tag 
+                                {% if booking.isBlockBooking %}status-block-booking
+                                {% elif booking.status == 'confirmed' %}status-confirmed
+                                {% elif booking.status == 'playing' %}status-playing
+                                {% elif booking.status == 'provisional' %}status-alert-yellow
+                                {% endif %}">
+                                {% if booking.isBlockBooking %}BLOQUEADO
+                                {% elif booking.status == 'confirmed' %}CONFIRMADO
+                                {% elif booking.status == 'playing' %}EM JOGO
+                                {% elif booking.status == 'provisional' %}PROVISÓRIO
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('admin_panel') }}" method="post" style="display:inline-block;">
+                                <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                                {% if booking.status == 'provisional' %}
+                                <button type="submit" name="confirm_provisional" class="action-button-table">Confirmar</button>
+                                {% endif %}
+                                <button type="submit" name="cancel_booking" class="action-button-table delete">Cancelar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>Nenhum agendamento encontrado.</p>
+            {% endif %}
+        </div>
+
+        <!-- NOVO: Seção para Histórico de Logs -->
+        <div class="section-card">
+            <h2>Histórico de Agendamentos (Logs)</h2>
+            <div class="form-group">
+                <label for="logDate">Selecionar Data:</label>
+                <input type="date" id="logDate" value="{{ current_date }}">
+                <button type="button" class="submit" onclick="fetchDailyLogs()">Ver Logs</button>
+                <button type="button" class="submit" onclick="exportDailyLogsCsv()">Exportar CSV</button>
+            </div>
+            
+            <div id="logsDisplay" style="margin-top: 20px;">
+                <p>Selecione uma data para ver os logs de agendamento.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal de Edição de Usuário -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeEditUserModal()">&times;</span>
+            <h2>Editar Usuário</h2>
+            <form action="{{ url_for('admin_panel') }}" method="post">
+                <input type="hidden" id="edit_user_id" name="edit_user_id">
+                <div class="form-group">
+                    <label for="edit_username">Nome de Usuário:</label>
+                    <input type="text" id="edit_username" name="edit_username" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_password">Nova Senha (deixe em branco para não alterar):</label>
+                    <input type="password" id="edit_password" name="edit_password">
+                </div>
+                <div class="form-group">
+                    <label for="edit_role">Perfil:</label>
+                    <select id="edit_role" name="edit_role" required>
+                        <option value="operator">Operador</option>
+                        <option value="viewer">Visualizador</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button type="button" class="cancel" onclick="closeEditUserModal()">Cancelar</button>
+                    <button type="submit" name="edit_user" class="submit">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Funções para o modal de edição de usuário
+        function openEditUserModal(id, username, role) {
+            document.getElementById('edit_user_id').value = id;
+            document.getElementById('edit_username').value = username;
+            document.getElementById('edit_role').value = role;
+            document.getElementById('edit_password').value = ''; // Limpa o campo de senha
+            document.getElementById('editUserModal').style.display = 'flex';
+        }
+
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').style.display = 'none';
+        }
+
+        // Função para buscar e exibir logs diários
+        async function fetchDailyLogs() {
+            const logDate = document.getElementById('logDate').value;
+            const logsDisplay = document.getElementById('logsDisplay');
+            logsDisplay.innerHTML = '<p>Carregando logs...</p>';
+
+            try {
+                const response = await fetch('/admin/get_daily_logs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ date: logDate })
+                });
+
+                if (response.ok) {
+                    const logs = await response.json();
+                    if (logs.length > 0) {
+                        let tableHtml = `
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Tipo de Evento</th>
+                                        <th>Quadra</th>
+                                        <th>Horário</th>
+                                        <th>Integrantes/Motivo</th>
+                                        <th>Realizado Por</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        logs.forEach(log => {
+                            const bookingInfo = log.booking_info;
+                            const playersOrReason = bookingInfo.isBlockBooking ? 
+                                                    `BLOQUEIO: ${bookingInfo.blockBookingReason || 'N/A'}` : 
+                                                    (bookingInfo.players ? bookingInfo.players.join(', ') : 'N/A');
+                            const eventTime = `${new Date(bookingInfo.startTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})} - ${new Date(bookingInfo.endTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`;
+
+                            tableHtml += `
+                                <tr>
+                                    <td>${new Date(log.timestamp).toLocaleString('pt-BR')}</td>
+                                    <td>${log.event_type.toUpperCase()}</td>
+                                    <td>${bookingInfo.courtId || 'N/A'}</td>
+                                    <td>${eventTime}</td>
+                                    <td>${playersOrReason}</td>
+                                    <td>${log.performed_by || 'Desconhecido'}</td>
+                                </tr>
+                            `;
+                        });
+                        tableHtml += `</tbody></table>`;
+                        logsDisplay.innerHTML = tableHtml;
+                    } else {
+                        logsDisplay.innerHTML = '<p>Nenhum agendamento ou cancelamento encontrado para esta data.</p>';
+                    }
+                } else if (response.status === 404) {
+                    logsDisplay.innerHTML = '<p>Nenhum log encontrado para esta data.</p>';
+                } else {
+                    const errorData = await response.json();
+                    logsDisplay.innerHTML = `<p style="color: var(--message-error-text);">Erro ao carregar logs: ${errorData.error || response.statusText}</p>`;
+                }
+            } catch (error) {
+                console.error('Erro ao buscar logs:', error);
+                logsDisplay.innerHTML = `<p style="color: var(--message-error-text);">Ocorreu um erro ao buscar os logs: ${error.message}</p>`;
+            }
+        }
+
+        // Função para exportar logs para CSV
+        async function exportDailyLogsCsv() {
+            const logDate = document.getElementById('logDate').value;
+
+            try {
+                const response = await fetch('/admin/export_daily_logs_csv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ date: logDate })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `logs_agendamento_${logDate}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    alert("Logs exportados para CSV com sucesso!");
+                } else {
+                    const errorData = await response.json();
+                    alert(`Erro ao exportar logs: ${errorData.error || response.statusText}`);
+                }
+            } catch (error) {
+                console.error('Erro ao exportar logs CSV:', error);
+                alert(`Ocorreu um erro ao exportar os logs: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

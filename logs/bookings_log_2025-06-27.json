@@ -1,0 +1,34 @@
+[
+    {
+        "timestamp": "2025-06-27T10:31:59.285874",
+        "event_type": "booked",
+        "booking_info": {
+            "courtId": "QUADRA 1",
+            "startTime": "2025-06-27T10:35:00",
+            "endTime": "2025-06-27T11:25:00",
+            "players": [
+                "cesar",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-06-27T11:46:33.114300",
+        "event_type": "booked",
+        "booking_info": {
+            "courtId": "QUADRA 2",
+            "startTime": "2025-06-27T11:50:00",
+            "endTime": "2025-06-27T12:40:00",
+            "players": [
+                "1",
+                "2"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    }
+]

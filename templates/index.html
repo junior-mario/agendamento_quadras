@@ -1,0 +1,850 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marcação de Quadras - Agendamento</title>
+    <style>
+        /* Definição da Paleta de Cores (baseada no código fornecido) */
+        :root {
+            --color-primary-green: #355E3B; /* Um verde floresta/pinho */
+            --color-darker-green-hover: #2D4C3A;
+            --color-lighter-green-action: #5BA85C;
+            --color-even-lighter-green-hover: #4F9A51;
+            
+            --color-red-delete: #C74B4B;
+            --color-darker-red-hover: #B03A3A;
+            
+            --color-yellow-archive: #E6B300;
+            --color-darker-yellow-hover: #CC9900;
+            
+            --color-blue-info: #3498db; /* Azul para informação/ação */
+            --color-darker-blue-info-hover: #2A7ABA;
+
+            --color-background-offwhite: #F8F5F0; /* Fundo um off-white/bege suave */
+            --color-text-darkgray: #4A4A4A; /* Texto em cinza escuro sofisticado */
+            --color-card-background: #ffffff; /* Cartões em branco puro para contraste */
+            --color-border-beige: #E0D8CC; /* Borda bege/light brown */
+            --color-input-border: #D1C7B7;
+            
+            /* Cores específicas para estados de agendamento no index.html */
+            --booking-free-bg: rgba(230, 255, 230, 0.6); /* Light green with transparency */
+            --booking-free-border: rgba(163, 230, 163, 0.8);
+            --booking-free-text: #155724;
+
+            --booking-confirmed-bg: rgba(212, 237, 218, 0.6); /* Greenish with transparency */
+            --booking-confirmed-text: #155724;
+
+            --booking-playing-bg: rgba(204, 238, 255, 0.6); /* Light blue with transparency */
+            --booking-playing-text: #0056b3;
+
+            --booking-alert-yellow-bg: rgba(255, 243, 205, 0.7); /* Yellowish with transparency */
+            --booking-alert-yellow-text: #856404;
+            --booking-alert-yellow-from: rgba(255, 243, 205, 0.7);
+            --booking-alert-yellow-to: rgba(255, 224, 130, 0.8); /* Slightly more opaque yellow */
+
+            --booking-alert-red-bg: rgba(248, 215, 218, 0.7); /* Reddish with transparency */
+            --booking-alert-red-text: #721c24;
+            --booking-alert-red-from: rgba(248, 215, 218, 0.7);
+            --booking-alert-red-to: rgba(231, 153, 153, 0.8); /* Slightly more opaque red */
+
+            --booking-block-bg: rgba(224, 187, 228, 0.6); /* Lilac/Purple with transparency */
+            --booking-block-text: #6a0572;
+            --booking-block-border: rgba(187, 126, 194, 0.8); /* Borda para o bloqueio */
+
+            /* NOVO: Estilo para a Lista de Espera */
+            --waiting-list-bg: rgba(255, 255, 204, 0.6); /* Amarelo muito claro */
+            --waiting-list-border: rgba(255, 229, 0, 0.8); /* Amarelo mais vibrante */
+            --waiting-list-text: #6b6b00; /* Texto em tom de marrom/oliva escuro */
+
+            --message-success-bg: #d4edda;
+            --message-success-text: #155724;
+            --message-error-bg: #f8d7da;
+            --message-error-text: #721c24;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--color-background-offwhite);
+            color: var(--color-text-darkgray);
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background-color: var(--color-card-background);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: var(--color-primary-green);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .navbar {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--color-border-beige);
+            padding-bottom: 10px;
+        }
+        .navbar a {
+            padding: 6px 12px;
+            text-decoration: none;
+            color: var(--color-blue-info);
+            font-weight: bold;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            font-size: 0.9em;
+        }
+        .navbar a:hover {
+            background-color: var(--color-background-offwhite);
+        }
+        .navbar a.active {
+            background-color: var(--color-primary-green);
+            color: white;
+        }
+        .current-time {
+            text-align: center;
+            font-size: 1em;
+            color: var(--color-text-darkgray);
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .courts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .court-column {
+            background-color: var(--color-card-background);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--color-border-beige);
+        }
+        .court-column h3 {
+            text-align: center;
+            color: var(--color-primary-green);
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            border-bottom: 2px solid var(--color-border-beige);
+            padding-bottom: 10px;
+        }
+        .booking-list {
+            flex-grow: 1;
+        }
+        .booking-item {
+            background-color: var(--color-card-background);
+            border: 1px solid var(--color-border-beige);
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            line-height: 1.4;
+            position: relative;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            transition: opacity 0.5s ease-in-out, background-color 0.5s ease-in-out, color 0.5s ease-in-out;
+        }
+        .booking-item.free-slot {
+            background-color: var(--booking-free-bg);
+            border-color: var(--booking-free-border);
+            cursor: pointer;
+            font-weight: bold;
+            color: var(--booking-free-text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 10px;
+            font-size: 0.85em;
+        }
+        .booking-item.free-slot:hover {
+            background-color: var(--booking-free-border);
+        }
+        .booking-item.confirmed {
+            background-color: var(--booking-confirmed-bg);
+            color: var(--booking-confirmed-text);
+        }
+        .booking-item.playing {
+            background-color: var(--booking-playing-bg);
+            color: var(--booking-playing-text);
+        }
+        .booking-item.alert-yellow {
+            background-color: var(--booking-alert-yellow-bg);
+            color: var(--booking-alert-yellow-text);
+            animation: pulse-yellow 1.2s infinite alternate ease-in-out;
+        }
+        .booking-item.alert-red {
+            background-color: var(--booking-alert-red-bg);
+            color: var(--booking-alert-red-text);
+            animation: pulse-red 1.2s infinite alternate ease-in-out;
+        }
+        .booking-item.block-booking {
+            background-color: var(--booking-block-bg);
+            color: var(--booking-block-text);
+            border-color: var(--booking-block-border);
+            animation: none;
+            font-style: italic;
+        }
+        .booking-item.faded-past {
+            background-color: rgba(240, 240, 240, 0.5);
+            border: 1px solid rgba(204, 204, 204, 0.7);
+            color: #999;
+            font-style: italic;
+            opacity: 0.7;
+            box-shadow: none;
+            animation: none;
+        }
+
+        @keyframes pulse-yellow {
+            from { box-shadow: 0 0 5px rgba(255, 193, 7, 0.2); background-color: var(--booking-alert-yellow-from); }
+            to { box-shadow: 0 0 12px rgba(255, 193, 7, 0.4); background-color: var(--booking-alert-yellow-to); }
+        }
+        @keyframes pulse-red {
+            from { box-shadow: 0 0 5px rgba(244, 67, 54, 0.2); background-color: var(--booking-alert-red-from); }
+            to { box-shadow: 0 0 12px rgba(244, 67, 54, 0.4); background-color: var(--booking-alert-red-to); }
+        }
+
+        .booking-form-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: var(--color-card-background);
+            padding: 30px;
+            border: 1px solid var(--color-border-beige);
+            width: 90%;
+            max-width: 500px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .close-button {
+            color: var(--color-text-darkgray);
+            float: right;
+            font-size: 32px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: var(--color-red-delete);
+            text-decoration: none;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--color-text-darkgray);
+        }
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group input[type="time"],
+        .form-group input[type="date"],
+        .form-group select {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid var(--color-input-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1em;
+            color: var(--color-text-darkgray);
+            background-color: var(--color-card-background);
+        }
+        .button-group {
+            text-align: right;
+            margin-top: 20px;
+        }
+        .button-group button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-left: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button-group button.submit {
+            background-color: var(--color-primary-green);
+            color: white;
+        }
+        .button-group button.submit:hover {
+            background-color: var(--color-darker-green-hover);
+        }
+        .button-group button.cancel {
+            background-color: var(--color-text-darkgray);
+            color: white;
+        }
+        .button-group button.cancel:hover {
+            background-color: #5a6268;
+        }
+        .message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .message.success {
+            background-color: var(--message-success-bg);
+            color: var(--message-success-text);
+        }
+        .message.error {
+            background-color: var(--message-error-bg);
+            color: var(--message-error-text);
+        }
+        .player-input-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .player-input-group input {
+            flex-grow: 1;
+        }
+        .player-input-group button {
+            background-color: var(--color-red-delete);
+            color: white;
+            border: none;
+            padding: 4px 6px;
+            margin-left: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+        .player-count-control {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .player-count-control button {
+            background-color: var(--color-blue-info);
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 5px;
+            font-size: 0.85em;
+        }
+        .player-count-control span {
+            font-weight: bold;
+        }
+
+        /* Estilos específicos para a Lista de Espera na página de agendamento */
+        .waiting-list-item {
+            background-color: var(--waiting-list-bg);
+            border: 1px solid var(--waiting-list-border);
+            color: var(--waiting-list-text);
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+        .waiting-list-item .player-names {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .waiting-list-item .details {
+            font-size: 0.85em;
+            color: #555;
+        }
+        .waiting-list-item .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: var(--color-red-delete);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 0.8em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .waiting-list-item .remove-btn:hover {
+            background-color: var(--color-darker-red-hover);
+        }
+        .waiting-list-form .form-group input,
+        .waiting-list-form .form-group select {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        .waiting-list-form .button-group {
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Marcação de Quadras - Quinta da Baroneza Tênis Clube</h1>
+
+        <div class="navbar">
+            <a href="{{ url_for('index') }}" class="active">Agendamento</a>
+            {% if g.user and (g.user.role == 'admin' or g.user.role == 'viewer') %}
+            <a href="{{ url_for('tv_view') }}">Visão TV</a>
+            {% endif %}
+            {% if g.user and g.user.role == 'admin' %}
+            <a href="{{ url_for('admin_panel') }}">Administração</a>
+            <a href="{{ url_for('statistics_panel') }}">Estatísticas</a>
+            {% endif %}
+            {% if g.user %}
+            <a href="{{ url_for('logout') }}" style="background-color: var(--color-red-delete); color: white;">Sair</a>
+            {% endif %}
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="current-time" id="currentTime"></div>
+
+        <h2>Agendamento de Quadras</h2>
+        <div class="courts-grid">
+            {% for court in courts %}
+                <div class="court-column">
+                    <h3>{{ court }}</h3>
+                    <div class="booking-list">
+                        {% if calendar_data[court] %}
+                            {% for booking in calendar_data[court] %}
+                                <div class="booking-item {{ booking.status_class }}">
+                                    {{ booking.display_text | safe }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p>Nenhum agendamento para esta quadra.</p>
+                        {% endif %}
+                        <!-- Botão para adicionar um novo agendamento, sempre disponível -->
+                        <div class="booking-item free-slot" onclick="openBookingModal('{{ court }}')">
+                            Agendar Novo Horário
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+
+            <!-- Coluna para a Lista de Espera -->
+            <div class="court-column">
+                <h3>Lista de Espera</h3>
+                <div class="booking-list">
+                    <div class="waiting-list-form">
+                        <h4>Adicionar Pessoa à Fila</h4>
+                        <div class="form-group">
+                            <label>Integrantes (2 ou 4):</label>
+                            <div class="player-count-control">
+                                <button type="button" onclick="changeWaitingPlayerCount(-1)">-</button>
+                                <span id="waitingPlayerCount">2</span>
+                                <button type="button" onclick="changeWaitingPlayerCount(1)">+</button>
+                            </div>
+                            <div id="waitingPlayerInputs">
+                                <!-- Player input fields for waiting list will be added here by JavaScript -->
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="waiting_preferred_court_select">Quadra Preferida (opcional):</label>
+                            <select id="waiting_preferred_court_select" class="form-control">
+                                <option value="">Qualquer</option>
+                                {% for court in courts %}
+                                    <option value="{{ court }}">{{ court }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="waiting_preferred_time_input">Hora Preferida (opcional):</label>
+                            <input type="time" id="waiting_preferred_time_input" class="form-control">
+                        </div>
+                        <div class="button-group">
+                            <button type="button" class="submit" onclick="addWaitingEntry()">Adicionar à Fila</button>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top: 20px;">Fila Atual:</h4>
+                    <div id="currentWaitingList">
+                        <!-- Conteúdo da lista de espera será populado via JavaScript na carga da página e atualizado via API -->
+                        <p>Carregando lista de espera...</p> {# Placeholder message #}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- The Booking Modal -->
+    <div id="bookingModal" class="booking-form-modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeBookingModal()">&times;</span>
+            <h2>Agendar Quadra <span id="modalCourtId"></span></h2>
+            
+            <form action="{{ url_for('book_court') }}" method="post">
+                <input type="hidden" name="courtId" id="formCourtId">
+                <input type="hidden" name="startTime" id="formStartTime">
+
+                <div class="form-group">
+                    <label for="bookingDate">Data do Agendamento:</label>
+                    <input type="date" id="bookingDate" required onchange="updateBookingDateTime()">
+                </div>
+                <div class="form-group">
+                    <label for="bookingTime">Hora de Início:</label>
+                    <input type="time" id="bookingTime" step="60" required readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Integrantes (2 ou 4):</label>
+                    <div class="player-count-control">
+                        <button type="button" onclick="changePlayerCount(-1)">-</button>
+                        <span id="playerCount">2</span>
+                        <button type="button" onclick="changePlayerCount(1)">+</button>
+                    </div>
+                    <div id="playerInputs">
+                        <!-- Player input fields will be added here by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="cancel" onclick="closeBookingModal()">Cancelar</button>
+                    <button type="submit" class="submit">Confirmar Agendamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentPlayerCount = 2; // Initial player count for general booking modal
+        let currentWaitingPlayerCount = 2; // Initial player count for waiting list form
+
+        // Embed data from Flask to JavaScript
+        window.allBookingsByCourt = {{ calendar_data | tojson | safe }}; 
+        window.bookingSettings = {{ settings | tojson | safe }};
+        // The waiting list data will be fetched dynamically by updateWaitingListDisplay
+
+
+        // Function to update the current time in the header
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            const dateString = now.toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            document.getElementById('currentTime').textContent = `${dateString} - ${timeString}`;
+        }
+
+        // Function to open the booking modal
+        function openBookingModal(courtId) {
+            document.getElementById('modalCourtId').innerText = courtId;
+            document.getElementById('formCourtId').value = courtId;
+
+            const bookingDurationMinutes = window.bookingSettings.bookingDurationMinutes;
+            const currentBookingsForCourt = window.allBookingsByCourt[courtId] || [];
+
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+            let nextAvailableSlot = null;
+
+            // Determine the latest relevant end time (now or a future booking's end)
+            let latestRelevantTime = new Date(now);
+            latestRelevantTime.setSeconds(0);
+            latestRelevantTime.setMilliseconds(0);
+
+            // Find the latest end time of any booking/block on this court that hasn't finished yet.
+            currentBookingsForCourt.forEach(booking => {
+                // Ensure booking.endTime is a Date object for comparison
+                const bookedEnd = new Date(booking.endTime); 
+                if (bookedEnd > latestRelevantTime) { // If booking ends in the future relative to latestRelevantTime
+                    latestRelevantTime = bookedEnd;
+                }
+            });
+
+            // The next available slot starts 1 minute after the latestRelevantTime.
+            let nextAvailableSlotStart = new Date(latestRelevantTime.getTime() + 60 * 1000); // Add 1 minute
+
+            // Adjust to the earliest allowed operating hour (e.g., 8 AM) if it's before that on the current day
+            const earliestOperatingHour = 8;
+            const earliestOperatingTimeToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), earliestOperatingHour, 0, 0);
+
+            if (nextAvailableSlotStart < earliestOperatingTimeToday) {
+                nextAvailableSlotStart = earliestOperatingTimeToday;
+            }
+
+            // Ensure the suggested time is rounded to the next 5-minute interval for consistency
+            // (Only if it's not the exact start of a new slot from a previous booking's end + 1min)
+            const minutes = nextAvailableSlotStart.getMinutes();
+            const remainder = minutes % 5;
+            if (remainder !== 0) {
+                nextAvailableSlotStart.setMinutes(minutes + (5 - remainder));
+            }
+            nextAvailableSlotStart.setSeconds(0);
+            nextAvailableSlotStart.setMilliseconds(0);
+
+
+            // Set the date and time in the modal
+            document.getElementById('bookingDate').value = nextAvailableSlotStart.toISOString().split('T')[0];
+            document.getElementById('bookingTime').value = nextAvailableSlotStart.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+            
+            updateBookingDateTime();
+            renderPlayerInputs();
+            document.getElementById('bookingModal').style.display = 'flex';
+        }
+
+        function closeBookingModal() {
+            document.getElementById('bookingModal').style.display = 'none';
+            resetPlayerInputs();
+        }
+
+        function updateBookingDateTime() {
+            const bookingDate = document.getElementById('bookingDate').value;
+            const bookingTime = document.getElementById('bookingTime').value;
+            
+            const fullDateTime = `${bookingDate}T${bookingTime}:00`; 
+            document.getElementById('formStartTime').value = fullDateTime;
+        }
+
+
+        function renderPlayerInputs() {
+            const playerInputsDiv = document.getElementById('playerInputs');
+            playerInputsDiv.innerHTML = '';
+
+            for (let i = 0; i < currentPlayerCount; i++) {
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'player-input-group';
+                inputGroup.innerHTML = `
+                    <input type="text" name="players" placeholder="Nome do Integrante ${i + 1}" required>
+                    ${i >= 2 ? '<button type="button" onclick="removePlayerField(this)">-</button>' : ''}
+                `;
+                playerInputsDiv.appendChild(inputGroup);
+            }
+        }
+
+        function changePlayerCount(delta) {
+            const newCount = currentPlayerCount + delta;
+            if (newCount >= 2 && newCount <= 4) {
+                currentPlayerCount = newCount;
+                document.getElementById('playerCount').innerText = currentPlayerCount;
+                renderPlayerInputs();
+            } else if (newCount < 2) {
+                alert("Mínimo de 2 integrantes.");
+            } else if (newCount > 4) {
+                alert("Máximo de 4 integrantes.");
+            }
+        }
+
+        function removePlayerField(buttonElement) {
+            if (currentPlayerCount > 2) {
+                buttonElement.closest('.player-input-group').remove();
+                currentPlayerCount--;
+                document.getElementById('playerCount').innerText = currentPlayerCount;
+            }
+        }
+
+        function resetPlayerInputs() {
+            currentPlayerCount = 2;
+            document.getElementById('playerCount').innerText = currentPlayerCount;
+            renderPlayerInputs();
+        }
+
+        // Funções para a Lista de Espera (frontend)
+
+        function renderWaitingListInputs() {
+            const waitingPlayerInputsDiv = document.getElementById('waitingPlayerInputs');
+            waitingPlayerInputsDiv.innerHTML = '';
+
+            for (let i = 0; i < currentWaitingPlayerCount; i++) {
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'player-input-group';
+                inputGroup.innerHTML = `
+                    <input type="text" name="waiting_players_input" placeholder="Nome do Integrante ${i + 1}" required>
+                    ${i >= 2 ? '<button type="button" onclick="removeWaitingPlayerField(this)">-</button>' : ''}
+                `;
+                waitingPlayerInputsDiv.appendChild(inputGroup);
+            }
+        }
+
+        function changeWaitingPlayerCount(delta) {
+            const newCount = currentWaitingPlayerCount + delta;
+            if (newCount >= 2 && newCount <= 4) {
+                currentWaitingPlayerCount = newCount;
+                document.getElementById('waitingPlayerCount').innerText = currentWaitingPlayerCount;
+                renderWaitingListInputs();
+            } else if (newCount < 2) {
+                alert("Mínimo de 2 integrantes para a lista de espera.");
+            } else if (newCount > 4) {
+                alert("Máximo de 4 integrantes para a lista de espera.");
+            }
+        }
+
+        function removeWaitingPlayerField(buttonElement) {
+            if (currentWaitingPlayerCount > 2) {
+                buttonElement.closest('.player-input-group').remove();
+                currentWaitingPlayerCount--;
+                document.getElementById('waitingPlayerCount').innerText = currentWaitingPlayerCount;
+            }
+        }
+
+        // Função para adicionar uma nova entrada na lista de espera via API
+        async function addWaitingEntry() {
+            const playerInputs = document.querySelectorAll('#waitingPlayerInputs input[name="waiting_players_input"]');
+            const players = Array.from(playerInputs).map(input => input.value.trim()).filter(value => value !== '');
+            const preferredCourt = document.getElementById('waiting_preferred_court_select').value;
+            const preferredTime = document.getElementById('waiting_preferred_time_input').value;
+
+            if (players.length < 2 || players.length > 4) {
+                alert("É obrigatório ter 2 ou 4 integrantes para a lista de espera.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/add_to_waiting_list', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        players: players,
+                        preferred_court: preferredCourt,
+                        preferred_time: preferredTime
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert(result.message);
+                    await updateWaitingListDisplay(); // Recarrega a lista para mostrar a nova entrada
+                    // Limpa o formulário após adicionar
+                    playerInputs.forEach(input => input.value = '');
+                    document.getElementById('waiting_preferred_court_select').value = '';
+                    document.getElementById('waiting_preferred_time_input').value = '';
+                    currentWaitingPlayerCount = 2; // Reseta a contagem
+                    document.getElementById('waitingPlayerCount').innerText = 2;
+                    renderWaitingListInputs(); // Renderiza os inputs com a contagem resetada
+                } else {
+                    alert(`Erro: ${result.message}`);
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar à lista de espera:', error);
+                alert('Ocorreu um erro ao adicionar à lista de espera.');
+            }
+        }
+
+        // Função para remover uma entrada da lista de espera via API
+        async function removeWaitingEntry(entryId) {
+            if (!confirm('Tem certeza que deseja remover esta entrada da lista de espera?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/remove_from_waiting_list', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ entry_id: entryId })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert(result.message);
+                    await updateWaitingListDisplay(); // Recarrega a lista
+                } else {
+                    alert(`Erro: ${result.message}`);
+                }
+            } catch (error) {
+                console.error('Erro ao remover da lista de espera:', error);
+                alert('Ocorreu um erro ao remover da lista de espera.');
+            }
+        }
+
+        // Função para atualizar a exibição da lista de espera (chamada após adicionar/remover)
+        async function updateWaitingListDisplay() {
+            const currentWaitingListDiv = document.getElementById('currentWaitingList');
+            currentWaitingListDiv.innerHTML = '<p>Carregando lista de espera...</p>'; // Show loading
+
+            try {
+                const response = await fetch('/api/get_waiting_list');
+                if (!response.ok) {
+                    throw new Error('Não foi possível carregar a lista de espera.');
+                }
+                const data = await response.json();
+                
+                currentWaitingListDiv.innerHTML = ''; // Clear current display
+
+                if (data.waiting_list.length > 0) {
+                    data.waiting_list.forEach(entry => {
+                        const entryDiv = document.createElement('div');
+                        entryDiv.className = 'waiting-list-item';
+                        entryDiv.id = `waiting-entry-${entry.id}`; 
+                        
+                        const requestedAtDate = new Date(entry.requestedAt);
+                        const requestedAtTime = requestedAtDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+
+                        entryDiv.innerHTML = `
+                            <span class="player-names">${entry.players.join(', ')}</span>
+                            <span class="details">Quadra: ${entry.preferredCourt || 'Qualquer'} | Hora: ${entry.preferredTime || 'Qualquer'}</span>
+                            <span class="details">Solicitado em: ${requestedAtTime} por ${entry.requestedBy || 'Desconhecido'}</span>
+                            <button type="button" class="remove-btn" onclick="removeWaitingEntry(${entry.id})">&times;</button>
+                        `;
+                        currentWaitingListDiv.appendChild(entryDiv);
+                    });
+                } else {
+                    currentWaitingListDiv.innerHTML = '<p>Ninguém na fila de espera.</p>';
+                }
+            } catch (error) {
+                console.error('Erro ao atualizar exibição da lista de espera:', error);
+                currentWaitingListDiv.innerHTML = `<p style="color: var(--message-error-text);">Erro ao carregar lista de espera: ${error.message}</p>`;
+            }
+        }
+
+
+        // Ao carregar a página
+        window.addEventListener('load', async () => {
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+            renderPlayerInputs();
+            renderWaitingListInputs();
+            await updateWaitingListDisplay(); // Popula a lista de espera ao carregar a página
+        });
+    </script>
+</body>
+</html>

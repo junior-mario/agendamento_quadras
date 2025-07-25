@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Agendamento de Quadras</title>
+    <style>
+        /* Reset básico */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Definição da Paleta de Cores (baseada no código fornecido e ajustes) */
+        :root {
+            --color-primary-green: #355E3B; /* Um verde floresta/pinho */
+            --color-darker-green-hover: #2D4C3A;
+            --color-lighter-green-action: #5BA85C;
+            --color-even-lighter-green-hover: #4F9A51;
+            
+            --color-red-delete: #C74B4B;
+            --color-darker-red-hover: #B03A3A;
+            
+            --color-yellow-archive: #E6B300;
+            --color-darker-yellow-hover: #CC9900;
+            
+            --color-blue-info: #3498db; /* Azul para informação/ação */
+            --color-darker-blue-info-hover: #2A7ABA;
+
+            --color-background-offwhite: #F8F5F0; /* Fundo um off-white/bege suave */
+            --color-text-darkgray: #4A4A4A; /* Texto em cinza escuro sofisticado */
+            --color-card-background: #ffffff; /* Cartões em branco puro para contraste */
+            --color-border-beige: #E0D8CC; /* Borda bege/light brown */
+            --color-input-border: #D1C7B7;
+            --color-tag-bg: #DCE8DA;
+            --color-tag-text: #355E3B;
+
+            /* Cores específicas para slots da dashboard (mantendo o padrão anterior com transparência) */
+            --slot-free-bg: rgba(230, 255, 230, 0.6); /* #e6ffe6 com transparência */
+            --slot-free-border: rgba(163, 230, 163, 0.8); /* #a3e6a3 com transparência */
+            --slot-free-text: #155724; 
+
+            --slot-occupied-bg: rgba(204, 238, 255, 0.6); /* #cceeff com transparência (azul) */
+            --slot-occupied-border: rgba(0, 123, 255, 0.8); /* #007bff com transparência */
+            --slot-occupied-text: #0056b3;
+
+            /* NOVO: Cores para "Em Jogo" (verde mais escuro) */
+            --slot-playing-active-bg: rgba(53, 94, 59, 0.8); /* Verde floresta/pinho com transparência */
+            --slot-playing-active-border: rgba(43, 75, 48, 0.9);
+            --slot-playing-active-text: white; /* Texto branco */
+
+            /* NOVO: Cores para "Terminando em Breve" (vermelho pulsante) */
+            --slot-ending-soon-bg-from: rgba(248, 215, 218, 0.7); /* Vermelho claro com transparência */
+            --slot-ending-soon-bg-to: rgba(231, 153, 153, 0.8); /* Um pouco mais opaco no pulso */
+            --slot-ending-soon-border: rgba(244, 67, 54, 0.6); /* Borda vermelha mais forte */
+            --slot-ending-soon-text: #721c24; /* Texto vermelho escuro */
+
+            --slot-past-bg: rgba(240, 240, 240, 0.5);
+            --slot-past-border: rgba(204, 204, 204, 0.7);
+            --slot-past-text: #999;
+
+            /* NOVO: Cores para bloqueios na TV */
+            --block-booking-tv-bg: rgba(224, 187, 228, 0.6); /* Lilac/Purple with transparency */
+            --block-booking-tv-text: #6a0572;
+            --block-booking-tv-border: rgba(187, 126, 194, 0.8);
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--color-background-offwhite);
+            height: 100vh;
+            overflow: hidden;
+            color: var(--color-text-darkgray);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dashboard {
+            height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            max-width: 1920px;
+            margin: auto;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            background-color: var(--color-card-background);
+            border-radius: 12px;
+            padding: 15px 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            color: var(--color-text-darkgray);
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.3rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-shadow: none;
+            color: var(--color-primary-green);
+        }
+
+        .current-time {
+            font-size: 1.1rem;
+            opacity: 1;
+            font-weight: 400;
+            color: var(--color-text-darkgray);
+        }
+        .navbar {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--color-border-beige);
+            padding-bottom: 10px;
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
+        }
+        .navbar.hidden-navbar {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .navbar a {
+            padding: 10px 20px;
+            text-decoration: none;
+            color: var(--color-blue-info);
+            font-weight: bold;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .navbar a:hover {
+            background-color: var(--color-background-offwhite);
+        }
+        .navbar a.active {
+            background-color: var(--color-primary-green);
+            color: white;
+        }
+
+        .user-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            color: var(--color-text-darkgray);
+            font-size: 0.9em;
+            font-weight: bold;
+            z-index: 5;
+            backdrop-filter: blur(3px);
+            border: 1px solid var(--color-border-beige);
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+            pointer-events: auto;
+        }
+        .user-info.hidden-navbar {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .user-info span {
+            display: block;
+            margin-bottom: 3px;
+        }
+        .user-info span:last-child {
+            margin-bottom: 0;
+        }
+        .user-info .role {
+            font-size: 0.85em;
+            color: #666;
+            font-weight: normal;
+        }
+
+        .quadras-grid {
+            flex: 1;
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 15px;
+            padding-bottom: 20px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            max-height: calc(100vh - 150px);
+            align-items: flex-start;
+        }
+
+        .quadra {
+            background-color: var(--color-card-background);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid var(--color-border-beige);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            transition: none;
+            min-width: 200px;
+            flex-shrink: 0;
+            height: 100%;
+        }
+
+        .quadra-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--color-primary-green);
+        }
+
+        .quadra-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--color-text-darkgray);
+        }
+
+        .quadra-status {
+            font-size: 1rem;
+            padding: 6px 15px;
+            border-radius: 25px;
+            font-weight: 600;
+        }
+
+        .status-livre {
+            background-color: var(--color-tag-bg);
+            color: var(--color-tag-text);
+            border: 1px solid var(--color-lighter-green-action);
+        }
+
+        .status-ocupada {
+            background-color: var(--slot-occupied-bg);
+            color: var(--slot-occupied-text);
+            border: 1px solid var(--slot-occupied-border);
+        }
+
+        .horarios-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .horario-slot {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        /* Cores de fundo com transparência mais suave (mantidas as cores originais, mas com variáveis) */
+        .slot-livre {
+            background-color: var(--slot-free-bg);
+            border: 1px solid var(--slot-free-border);
+            color: var(--slot-free-text);
+        }
+
+        .slot-ocupado { /* Agendamentos Futuros (azul) */
+            background-color: var(--slot-occupied-bg);
+            border: 1px solid var(--slot-occupied-border);
+            color: var(--slot-occupied-text);
+            animation: none; /* Sem animação para agendados futuros */
+        }
+
+        .slot-playing-active { /* NOVO: Agendamentos "Em Jogo" (verde escuro) */
+            background-color: var(--slot-playing-active-bg);
+            border: 1px solid var(--slot-playing-active-border);
+            color: var(--slot-playing-active-text);
+            box-shadow: none;
+            animation: none;
+        }
+
+        .slot-ending-soon { /* NOVO: Agendamentos "Terminando em Breve" (vermelho pulsante) */
+            background-color: var(--slot-ending-soon-bg-from);
+            border: 1px solid var(--slot-ending-soon-border);
+            color: var(--slot-ending-soon-text);
+            box-shadow: none;
+            animation: pulse-red-alert 1.5s infinite alternate ease-in-out;
+        }
+
+        .block-booking-tv { /* NOVO: Bloqueios (lilás/roxo) */
+            background-color: var(--block-booking-tv-bg);
+            border: 1px solid var(--block-booking-tv-border);
+            color: var(--block-booking-tv-text);
+            box-shadow: none;
+            animation: none;
+            font-style: italic;
+        }
+
+        .past-slot {
+            background-color: var(--slot-past-bg);
+            border: 1px solid var(--slot-past-border);
+            color: var(--slot-past-text);
+            font-style: italic;
+            opacity: 0.7;
+            box-shadow: none;
+        }
+
+        /* Animação de pulso para vermelho */
+        @keyframes pulse-red-alert {
+            0% { box-shadow: 0 0 8px rgba(244, 67, 54, 0.2); background-color: var(--slot-ending-soon-bg-from); }
+            100% { box-shadow: 0 0 12px rgba(244, 67, 54, 0.4); background-color: var(--slot-ending-soon-bg-to); }
+        }
+
+        .cliente-nome {
+            font-weight: 700;
+            font-size: 1em;
+            margin-bottom: 3px;
+        }
+
+        .horario-time {
+            font-weight: 500;
+            font-size: 0.95em;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 12px 25px;
+            border-radius: 25px;
+            backdrop-filter: blur(5px);
+            color: white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            opacity: 1;
+            transition: none;
+            pointer-events: auto;
+            z-index: 100;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            font-weight: 400;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Cores da legenda */
+        .legend-livre { background-color: #e6ffe6; }
+        .legend-ocupado { background-color: #cceeff; }
+        .legend-atual { background-color: #fff3cd; } /* Este será o amarelo, para a legenda de "Em Andamento" se necessário ou pode ser removido da legenda se não for mais um status primário */
+        /* NOVO: Cores da legenda para os novos status */
+        .legend-playing-active { background-color: var(--slot-playing-active-bg); border-color: var(--slot-playing-active-border); }
+        .legend-ending-soon { background-color: var(--slot-ending-soon-bg-from); border-color: var(--slot-ending-soon-border); }
+        .legend-block-booking { background-color: var(--block-booking-tv-bg); border-color: var(--block-booking-tv-border); }
+
+
+        /* Scrollbar customizada */
+        .horarios-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .horarios-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        .horarios-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+        .horarios-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>🏸 Centro Esportivo - Agendamento de Quadras</h1>
+            <div class="current-time" id="currentTime"></div>
+            {% if g.user %}
+            <div class="user-info" id="userInfo">
+                <span>Olá, {{ g.user.username | capitalize }}!</span>
+                <span class="role">Perfil: {{ g.user.role | capitalize }}</span>
+            </div>
+            {% endif %}
+        </div>
+        <div class="navbar" id="mainNavbar">
+            {% if g.user and (g.user.role == 'admin' or g.user.role == 'operator') %}
+            <a href="{{ url_for('index') }}">Agendamento</a>
+            {% endif %}
+            {% if g.user and (g.user.role == 'admin' or g.user.role == 'viewer') %}
+            <a href="{{ url_for('tv_view') }}" class="active">Visão TV</a>
+            {% endif %}
+            {% if g.user and g.user.role == 'admin' %}
+            <a href="{{ url_for('admin_panel') }}">Administração</a>
+            <a href="{{ url_for('statistics_panel') }}">Estatísticas</a>
+            {% endif %}
+            {% if g.user %}
+            <a href="{{ url_for('logout') }}" style="background-color: var(--color-red-delete); color: white;">Sair</a>
+            {% endif %}
+        </div>
+        
+        <div class="quadras-grid" id="quadrasGrid"></div>
+
+        <div class="legend" id="dashboardLegend">
+            <div class="legend-item">
+                <div class="legend-color legend-livre"></div>
+                <span>Disponível</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-ocupado"></div>
+                <span>Agendado</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-playing-active"></div>
+                <span>Em Jogo</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-ending-soon"></div>
+                <span>Finalizando</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-block-booking"></div>
+                <span>Bloqueado</span>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Função para atualizar a hora atual no cabeçalho
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            const dateString = now.toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            document.getElementById('currentTime').textContent = `${dateString} - ${timeString}`;
+        }
+
+        // Função para renderizar todas as quadras a partir dos dados da API
+        async function renderQuadrasFromAPI() {
+            const grid = document.getElementById('quadrasGrid');
+            grid.innerHTML = '<p style="text-align: center; color: var(--color-text-darkgray);">Carregando agendamentos...</p>';
+
+            try {
+                const response = await fetch('/api/dashboard_data');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const quadrasData = await response.json();
+                
+                grid.innerHTML = '';
+
+                quadrasData.forEach(quadra => {
+                    const quadraEl = document.createElement('div');
+                    quadraEl.className = 'quadra';
+                                    
+                    let horariosHtml = '';
+                    if (quadra.agendamentos && quadra.agendamentos.length > 0) {
+                        quadra.agendamentos.forEach(slot => {
+                            horariosHtml += `<div class="horario-slot ${slot.status_class}">${slot.content}</div>`;
+                        });
+                    } else {
+                        horariosHtml = `
+                            <div class="horario-slot slot-livre">
+                                <span class="horario-time">Dia Todo</span>
+                                <span class="cliente-nome">Disponível</span>
+                            </div>
+                        `;
+                    }
+
+                    quadraEl.innerHTML = `
+                        <div class="quadra-header">
+                            <div class="quadra-title">${quadra.nome}</div>
+                            <div class="quadra-status ${quadra.status === 'livre' ? 'status-livre' : 'status-ocupada'}">
+                                ${quadra.status === 'livre' ? 'Disponível' : 'Em Uso'}
+                            </div>
+                        </div>
+                        <div class="horarios-container">
+                            ${horariosHtml}
+                        </div>
+                    `;
+                    grid.appendChild(quadraEl);
+                });
+            } catch (error) {
+                console.error('Erro ao buscar dados da dashboard:', error);
+                grid.innerHTML = `<p style="text-align: center; color: var(--color-red-delete);">Erro ao carregar agendamentos: ${error.message}. Por favor, recarregue a página.</p>`;
+            }
+        }
+
+        // --- Inactivity Timer for Navbar and User Info ---
+        const mainNavbar = document.getElementById('mainNavbar');
+        const userInfo = document.getElementById('userInfo');
+        let inactivityTimeout;
+        const INACTIVITY_TIME = 5000; // 5 seconds
+
+        function hideControls() {
+            mainNavbar.classList.add('hidden-navbar');
+            if (userInfo) {
+                userInfo.classList.add('hidden-navbar');
+            }
+        }
+
+        function showControls() {
+            mainNavbar.classList.remove('hidden-navbar');
+            if (userInfo) {
+                userInfo.classList.remove('hidden-navbar');
+            }
+            resetInactivityTimer();
+        }
+
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimeout);
+            inactivityTimeout = setTimeout(hideControls, INACTIVITY_TIME);
+        }
+
+        // Add event listeners for user activity
+        document.addEventListener('mousemove', showControls);
+        document.addEventListener('keydown', showControls);
+        document.addEventListener('click', showControls);
+
+
+        // Função de inicialização da dashboard
+        function init() {
+            updateCurrentTime();
+            renderQuadrasFromAPI();
+
+            setInterval(() => {
+                updateCurrentTime();
+                if (Date.now() % 30000 < 1000) {
+                     renderQuadrasFromAPI(); 
+                }
+            }, 1000);
+
+            resetInactivityTimer();
+        }
+
+        // Inicializar quando a página carregar
+        window.addEventListener('load', () => {
+            init();
+        });
+    </script>
+</body>
+</html>
