@@ -574,57 +574,109 @@ def logout():
 @login_required
 @role_required(['admin', 'operator'])
 def index():
+    # Get selected date from query parameter, default to today
+    selected_date_str = request.args.get('selected_date')
+    if selected_date_str:
+        try:
+            selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash("Formato de data inválido. Exibindo agendamentos para hoje.", "error")
+            selected_date = datetime.now().date()
+    else:
+        selected_date = datetime.now().date()
+
     settings = get_settings_db()
-    all_bookings = get_bookings_db()
     waiting_list = get_waiting_list_db() 
-
     courts = [f"QUADRA {i + 1}" for i in range(7)]
-    
-    calendar_data = {court: [] for court in courts}
-    
-    # FILTRAR AGENDAMENTOS PARA O DIA ATUAL E FUTURO AQUI
-    now = datetime.now()
-    if now.tzinfo is not None:
-        now = now.replace(tzinfo=None)
 
-    # Filtrar agendamentos a partir do início do dia atual
-    # Manter esta lógica para o index.html, pois ele renderiza os agendamentos diretamente
-    filtered_bookings = [
-        b for b in all_bookings 
-        if b['startTime'] >= now.replace(hour=0, minute=0, second=0, microsecond=0)
-    ]
+    # The actual data for the grid will be fetched by JavaScript via /api/index_data
+    return render_template('index.html', courts=courts, settings=settings, 
+                           waiting_list=waiting_list, selected_date=selected_date.isoformat())
 
-    for booking in filtered_bookings: # Usar os agendamentos filtrados
-        if booking['courtId'] in calendar_data:
-            booking['status_class'] = get_booking_status(booking, settings['bookingDurationMinutes'])
+@app.route('/api/index_data')
+@login_required
+@role_required(['admin', 'operator'])
+def api_index_data():
+    print("API: /api/index_data chamada.")
+    try:
+        settings = get_settings_db()
+        all_bookings = get_bookings_db()
+
+        # Get selected date from query parameter, default to today
+        selected_date_str = request.args.get('selected_date')
+        if selected_date_str:
+            try:
+                selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({"error": "Formato de data inválido."}), 400
+        else:
+            selected_date = datetime.now().date()
+
+        courts = [f"QUADRA {i + 1}" for i in range(7)]
+        index_output_data = []
+
+        # Filter bookings for the selected date (from 00:00:00 to 23:59:59)
+        start_of_day = datetime.combine(selected_date, datetime.min.time())
+        end_of_day = datetime.combine(selected_date, datetime.max.time())
+
+        filtered_bookings = sorted([
+            b for b in all_bookings 
+            if b['startTime'] >= start_of_day and b['startTime'] <= end_of_day
+        ], key=lambda x: x['startTime'])
+        
+        print(f"API: Agendamentos filtrados para {selected_date.isoformat()}: {len(filtered_bookings)}")
+
+        for court_name in courts:
+            court_display_slots = []
             
-            # Ajusta o display_text para bloqueios
-            if booking['isBlockBooking']:
-                display_text = f"BLOQUEADO:<br>{booking['blockBookingReason']}<br>{booking['startTime'].strftime('%H:%M')} - {booking['endTime'].strftime('%H:%M')}"
-            else:
-                display_text = f"{', '.join(booking['players'])}"
-                display_text += f"<br>{booking['startTime'].strftime('%H:%M')} - {booking['endTime'].strftime('%H:%M')}"
-                if booking['status_class'] == 'alert-yellow':
-                    display_text += "<br>Atenção!"
-                elif booking['status_class'] == 'alert-red':
-                    display_text += "<br>Tempo Esgotado!"
+            # Get bookings for this specific court and date
+            court_bookings_for_date = [b for b in filtered_bookings if b['courtId'] == court_name]
+
+            for booking in court_bookings_for_date:
+                booking_status_from_logic = get_booking_status(booking, settings['bookingDurationMinutes'])
+
+                slot_status_class = ''
+                if booking['isBlockBooking']:
+                    slot_status_class = 'block-booking' # Changed from block-booking-tv
+                elif booking_status_from_logic == 'playing':
+                    slot_status_class = 'playing' # Changed from slot-playing-active
+                elif booking_status_from_logic == 'alert-yellow' or booking_status_from_logic == 'alert-red':
+                    slot_status_class = 'alert-yellow' # Use alert-yellow for both for simplicity in index
+                elif booking_status_from_logic == 'confirmed':
+                    slot_status_class = 'confirmed' # Changed from slot-ocupado
+                elif booking_status_from_logic == 'faded-past':
+                    slot_status_class = 'faded-past'
+
+                players_or_reason = (', '.join(booking['players']) if not booking['isBlockBooking'] 
+                                         else booking['blockBookingReason'])
+
+                # MODIFICADO: Inclui a data no formato DD/MM
+                content_html = (
+                    f"<span class='cliente-nome'>{players_or_reason}</span>"
+                    f"<br><span class='horario-time'>{booking['startTime'].strftime('%d/%m %H:%M')} - {booking['endTime'].strftime('%H:%M')}</span>"
+                )
+
+                court_display_slots.append({
+                    'startTime': booking['startTime'].isoformat(),
+                    'endTime': booking['endTime'].isoformat(),
+                    'content': content_html,
+                    'status_class': slot_status_class,
+                    'type': 'booked' if not booking['isBlockBooking'] else 'blocked'
+                })
             
-            booking['display_text'] = display_text
-            
-            booking_copy = booking.copy()
-            booking_copy['startTime'] = booking_copy['startTime'].isoformat()
-            booking_copy['endTime'] = booking_copy['endTime'].isoformat()
+            index_output_data.append({
+                'id': court_name, 
+                'nome': court_name,
+                'tipo': 'Tênis/Esportes',
+                'agendamentos': court_display_slots
+            })
+        
+        print(f"API: Dados de index a serem retornados: {len(index_output_data)} quadras.")
+        return jsonify(index_output_data)
+    except Exception as e:
+        print(f"API ERROR: Erro na rota /api/index_data: {e}")
+        return jsonify({"error": str(e)}), 500
 
-            calendar_data[booking['courtId']].append(booking_copy)
-    
-    for court in courts:
-        calendar_data[court].sort(key=lambda x: x['startTime'])
-
-    hours_for_modal = [f"{h:02d}:00" for h in range(8, 24)]
-
-    return render_template('index.html', courts=courts, calendar_data=calendar_data, 
-                           hours_for_modal=hours_for_modal, settings=settings, 
-                           waiting_list=waiting_list)
 
 @app.route('/book', methods=['POST'])
 @login_required
@@ -660,7 +712,11 @@ def book_court():
     else:
         flash(message, "error")
 
-    return redirect(url_for('index'))
+    # Redirect back to the index page, preserving the selected date if any
+    redirect_url = url_for('index')
+    if booking_date_str:
+        redirect_url = url_for('index', selected_date=booking_date_str)
+    return redirect(redirect_url)
 
 @app.route('/admin', methods=['GET', 'POST'])
 @login_required
@@ -830,9 +886,10 @@ def api_dashboard_data():
                 players_or_reason = (', '.join(booking['players']) if not booking['isBlockBooking'] 
                                          else booking['blockBookingReason'])
 
+                # MODIFICADO: Inclui a data no formato DD/MM
                 content_html = (
                     f"<span class='cliente-nome'>{players_or_reason}</span>"
-                    f"<span class='horario-time'>{booking['startTime'].strftime('%H:%M')} - {booking['endTime'].strftime('%H:%M')}</span>"
+                    f"<br><span class='horario-time'>{booking['startTime'].strftime('%d/%m %H:%M')} - {booking['endTime'].strftime('%H:%M')}</span>"
                 )
 
                 court_display_slots.append({

@@ -413,7 +413,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Marcação de Quadras - Quinta da Barginca Tênis Clube</h1>
+        <h1>Marcação de Quadras - Quinta da Baroneza Tênis Clube</h1>
 
         <div class="navbar">
             <a href="{{ url_for('index') }}" class="active">Agendamento</a>
@@ -440,6 +440,13 @@
         <div class="current-time" id="currentTime"></div>
 
         <h2>Agendamento de Quadras</h2>
+
+        <div class="date-selector" style="text-align: center; margin-bottom: 20px;">
+            <label for="displayDate">Exibir Agendamentos para:</label>
+            <input type="date" id="displayDate" value="{{ selected_date }}">
+            <button onclick="changeDisplayDate()">Carregar Data</button>
+        </div>
+
         <div class="courts-grid" id="courtsGrid">
             <!-- Conteúdo das quadras será populado via JavaScript -->
             <p style="text-align: center; color: var(--color-text-darkgray);">Carregando agendamentos do dia...</p>
@@ -493,6 +500,7 @@
         let currentPlayerCount = 2; // Initial player count for general booking modal
         let currentWaitingPlayerCount = 2; // Initial player count for waiting list form
         let fetchedCourtsData = []; // Global variable to store fetched court data
+        let currentDisplayDate = "{{ selected_date }}"; // Store the date currently displayed on the page
 
         // Embed data from Flask to JavaScript
         window.bookingSettings = {{ settings | tojson | safe }};
@@ -522,7 +530,8 @@
             const bookingDurationMinutes = window.bookingSettings.bookingDurationMinutes;
             const actualBookingDuration = bookingDurationMinutes - 1; // Subtract 1 minute
 
-            let suggestedStartTime = new Date(); // Default to current time
+            // Use the currentDisplayDate for the modal's date
+            let suggestedStartTime = new Date(`${currentDisplayDate}T${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`); 
 
             // Find the relevant court data from the globally stored fetchedCourtsData
             const courtData = fetchedCourtsData.find(q => q.nome === courtId);
@@ -531,11 +540,12 @@
                 let latestEndTime = null;
                 const now = new Date();
 
-                // Find the latest end time of a *current or future* booking for this court
-                // Filter for confirmed, playing, ending-soon, block-booking slots that are not entirely in the past
+                // Filter relevant bookings for the *currentDisplayDate*
                 const relevantBookings = courtData.agendamentos.filter(slot => {
+                    const slotStartTime = new Date(slot.startTime);
                     const slotEndTime = new Date(slot.endTime);
-                    return slotEndTime > now; // Only consider bookings that end in the future
+                    // Ensure the slot is on the current display date
+                    return slotStartTime.toISOString().split('T')[0] === currentDisplayDate && slotEndTime > now;
                 });
 
                 // Sort relevant bookings by end time to find the latest
@@ -548,11 +558,12 @@
 
                 if (latestEndTime) {
                     // If current time is within or before the latest booking, start 1 minute after it ends
-                    if (now < latestEndTime) { // If there's an active or future booking
+                    // Only adjust if the latestEndTime is on the currentDisplayDate
+                    if (latestEndTime.toISOString().split('T')[0] === currentDisplayDate && now < latestEndTime) {
                         suggestedStartTime = new Date(latestEndTime.getTime() + (1 * 60 * 1000)); // Add 1 minute
                     } else {
                         // If all relevant bookings are in the past, or current time is after the last relevant booking, use current time
-                        suggestedStartTime = now;
+                        suggestedStartTime = new Date(`${currentDisplayDate}T${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`);
                     }
                 }
             }
@@ -561,16 +572,18 @@
             suggestedStartTime.setSeconds(0);
             suggestedStartTime.setMilliseconds(0);
             
-            // Se o suggestedStartTime for no passado, ajuste para a hora atual
-            const now = new Date(); // Re-obter now para garantir que está atualizado
-            if (suggestedStartTime < now) {
-                suggestedStartTime = now;
+            // Se o suggestedStartTime for no passado (em relação à hora atual do dia de exibição), ajuste para a hora atual
+            const now = new Date();
+            const currentDateTimeOnDisplayDate = new Date(`${currentDisplayDate}T${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`);
+
+            if (suggestedStartTime < currentDateTimeOnDisplayDate) {
+                suggestedStartTime = currentDateTimeOnDisplayDate;
                 suggestedStartTime.setSeconds(0);
                 suggestedStartTime.setMilliseconds(0);
             }
 
             // Set the date and time in the modal
-            document.getElementById('bookingDate').value = suggestedStartTime.toISOString().split('T')[0];
+            document.getElementById('bookingDate').value = currentDisplayDate; // Always use the displayed date
             document.getElementById('bookingTime').value = suggestedStartTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
             
             // Calculate and display the estimated end time in the modal for user info
@@ -672,7 +685,7 @@
             if (currentWaitingPlayerCount > 2) {
                 buttonElement.closest('.player-input-group').remove();
                 currentWaitingPlayerCount--;
-                document.getElementById('waitingPlayerCount').innerText = currentWaitingPlayerCount;
+                document.getElementById('playerCount').innerText = currentPlayerCount;
             }
         }
 
@@ -794,23 +807,21 @@
         }
 
 
-        // Função para carregar e renderizar os agendamentos do dia atual
-        async function loadAndRenderCurrentDayBookings() {
+        // Função para carregar e renderizar os agendamentos para a data selecionada
+        async function loadAndRenderBookingsForDate(dateString) {
             const courtsGrid = document.getElementById('courtsGrid');
-            courtsGrid.innerHTML = '<p style="text-align: center; color: var(--color-text-darkgray);">Carregando agendamentos do dia...</p>';
-            console.log('1. Mensagem de carregamento inicial definida.');
+            courtsGrid.innerHTML = '<p style="text-align: center; color: var(--color-text-darkgray);">Carregando agendamentos...</p>';
+            console.log(`1. Mensagem de carregamento inicial definida para a data: ${dateString}.`);
 
             try {
-                console.log('2. Tentando buscar /api/dashboard_data...');
-                const response = await fetch('/api/dashboard_data');
-                console.log('3. Resposta da API recebida, status:', response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                const apiResponse = await fetch(`/api/index_data?selected_date=${dateString}`);
+                if (!apiResponse.ok) {
+                    throw new Error(`HTTP error! status: ${apiResponse.status}`);
                 }
-                const quadrasData = await response.json();
-                fetchedCourtsData = quadrasData;
-                console.log('4. Dados buscados e analisados:', quadrasData);
-                
+                const quadrasData = await apiResponse.json();
+                fetchedCourtsData = quadrasData; // Update global data
+                console.log('4. Dados buscados e analisados para a data selecionada:', quadrasData);
+
                 courtsGrid.innerHTML = ''; // Limpa a mensagem de carregamento
                 console.log('5. Mensagem de carregamento limpa. Começando a renderizar as quadras.');
 
@@ -827,30 +838,24 @@
                     let bookingListHtml = '';
                     if (quadra && quadra.agendamentos && quadra.agendamentos.length > 0) {
                         console.log(`6c. Agendamentos encontrados para ${courtName}:`, quadra.agendamentos.length);
-                        // AQUI: Não há mais necessidade de filtrar por 'relevantBookings' no frontend,
-                        // pois o backend já enviará apenas os agendamentos relevantes (futuros/ativos).
                         quadra.agendamentos.forEach(slot => {
                             let statusClass = '';
                             let content = '';
                             // Já são strings ISO do backend, então substring(11, 16) funciona
-                            let startTime = slot.startTime.substring(11, 16); 
-                            let endTime = slot.endTime.substring(11, 16);
+                            // Note: The backend now includes date in content_html, so we might not need to parse it here.
+                            // Let's use the content directly from the backend.
+                            content = slot.content; // Use content directly from backend as it now includes date
 
-                            if (slot.status_class === 'slot-ocupado') {
+                            if (slot.status_class === 'confirmed') {
                                 statusClass = 'confirmed';
-                                content = slot.content; 
-                            } else if (slot.status_class === 'slot-playing-active') {
+                            } else if (slot.status_class === 'playing') {
                                 statusClass = 'playing';
-                                content = slot.content;
-                            } else if (slot.status_class === 'slot-ending-soon') {
+                            } else if (slot.status_class === 'alert-yellow') {
                                 statusClass = 'alert-yellow'; 
-                                content = slot.content;
-                            } else if (slot.status_class === 'block-booking-tv') {
+                            } else if (slot.status_class === 'block-booking') {
                                 statusClass = 'block-booking';
-                                content = slot.content;
-                            } else if (slot.status_class === 'slot-passado') { 
+                            } else if (slot.status_class === 'faded-past') { 
                                 statusClass = 'faded-past';
-                                content = slot.content;
                             }
 
                             bookingListHtml += `<div class="booking-item ${statusClass}">${content}</div>`;
@@ -930,13 +935,20 @@
             }
         }
 
+        // Function to handle date change
+        function changeDisplayDate() {
+            const selectedDate = document.getElementById('displayDate').value;
+            currentDisplayDate = selectedDate; // Update the global variable
+            loadAndRenderBookingsForDate(selectedDate);
+        }
 
         // Ao carregar a página
         window.addEventListener('load', async () => {
             updateCurrentTime();
             setInterval(updateCurrentTime, 1000);
             renderPlayerInputs(); // Para o modal de agendamento (este pode permanecer aqui, pois o modal está sempre no HTML)
-            await loadAndRenderCurrentDayBookings(); // Carrega os agendamentos do dia atual
+            // Load bookings for the date initially passed by Flask (today's date)
+            await loadAndRenderBookingsForDate(currentDisplayDate); 
         });
     </script>
 </body>
