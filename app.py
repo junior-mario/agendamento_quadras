@@ -290,7 +290,7 @@ def add_booking_db(court_id, start_time, end_time, players, is_block_booking=Fal
                 "courtId": court_id,
                 "startTime": start_time.isoformat(),
                 "endTime": end_time.isoformat(),
-                "players": players,
+                "players": players, # Agora players é uma lista de dicionários com nome e tipo
                 "isBlockBooking": is_block_booking,
                 "blockBookingReason": block_reason
             },
@@ -601,7 +601,9 @@ def api_index_data():
     print("API: /api/index_data chamada.")
     try:
         settings = get_settings_db()
+        print(f"API: Configurações obtidas: {settings}")
         all_bookings = get_bookings_db()
+        print(f"API: Total de agendamentos brutos obtidos: {len(all_bookings)}")
 
         # Get selected date from query parameter, default to today
         selected_date_str = request.args.get('selected_date')
@@ -648,8 +650,23 @@ def api_index_data():
                 elif booking_status_from_logic == 'faded-past':
                     slot_status_class = 'faded-past'
 
-                players_or_reason = (', '.join(booking['players']) if not booking['isBlockBooking'] 
-                                         else booking['blockBookingReason'])
+                players_or_reason = ""
+                if not booking['isBlockBooking']:
+                    # Ensure booking['players'] is a list and contains dictionaries
+                    if isinstance(booking['players'], list):
+                        formatted_players = []
+                        for p in booking['players']:
+                            if isinstance(p, dict) and 'name' in p:
+                                formatted_players.append(p['name'])
+                            else:
+                                # Fallback for malformed player entries (e.g., if it's just a string in the list)
+                                formatted_players.append(str(p))
+                        players_or_reason = ', '.join(formatted_players)
+                    else:
+                        # Fallback if booking['players'] is not a list (e.g., a simple string from old data)
+                        players_or_reason = str(booking['players'])
+                else:
+                    players_or_reason = booking['blockBookingReason']
 
                 # MODIFICADO: Inclui a data no formato DD/MM
                 content_html = (
@@ -687,11 +704,26 @@ def book_court():
     # Alterado para pegar a data e a hora separadamente
     booking_date_str = request.form['bookingDate']
     booking_time_str = request.form['bookingTime']
-    players_raw = request.form.getlist('players')
-    players = [p.strip() for p in players_raw if p.strip()]
+    
+    # Coleta os tipos de jogador
+    players_data = []
+    player_index = 0
+    while True:
+        player_name_key = f'players[{player_index}]'
+        player_type_key = f'playerType_{player_index}'
+        
+        player_name = request.form.get(player_name_key)
+        player_type = request.form.get(player_type_key)
+
+        if player_name is None: # Se não encontrar mais campos de jogador
+            break
+        
+        if player_name.strip(): # Apenas adiciona se o nome não for vazio
+            players_data.append({'name': player_name.strip(), 'type': player_type})
+        player_index += 1
 
     # MODIFICAÇÃO AQUI: Permite de 2 a 6 jogadores
-    if not players or len(players) < 2 or len(players) > 6:
+    if not players_data or len(players_data) < 2 or len(players_data) > 6:
         flash("É obrigatório ter entre 2 e 6 integrantes para o jogo.", "error")
         return redirect(url_for('index'))
 
@@ -707,7 +739,7 @@ def book_court():
     actual_booking_duration = booking_duration_minutes - 1
     end_time_dt = start_time_dt + timedelta(minutes=actual_booking_duration)
 
-    success, message = add_booking_db(court_id, start_time_dt, end_time_dt, players)
+    success, message = add_booking_db(court_id, start_time_dt, end_time_dt, players_data) # Passa players_data (com tipo)
     
     if success:
         flash(message, "success")
@@ -894,8 +926,23 @@ def api_dashboard_data():
                 elif booking_status_from_logic == 'faded-past':
                     slot_status_class = 'slot-passado' 
 
-                players_or_reason = (', '.join(booking['players']) if not booking['isBlockBooking'] 
-                                         else booking['blockBookingReason'])
+                players_or_reason = ""
+                if not booking['isBlockBooking']:
+                    # Ensure booking['players'] is a list and contains dictionaries
+                    if isinstance(booking['players'], list):
+                        formatted_players = []
+                        for p in booking['players']:
+                            if isinstance(p, dict) and 'name' in p:
+                                formatted_players.append(p['name'])
+                            else:
+                                # Fallback for malformed player entries (e.g., if it's just a string in the list)
+                                formatted_players.append(str(p))
+                        players_or_reason = ', '.join(formatted_players)
+                    else:
+                        # Fallback if booking['players'] is not a list (e.g., a simple string from old data)
+                        players_or_reason = str(booking['players'])
+                else:
+                    players_or_reason = booking['blockBookingReason']
 
                 # MODIFICADO: Remove a data, exibe apenas o horário
                 content_html = (
@@ -1081,8 +1128,13 @@ def export_daily_logs_csv():
             if booking_info.get('isBlockBooking'):
                 players_or_reason = f"BLOQUEIO: {booking_info.get('blockBookingReason', 'N/A')}"
             else:
-                players_list = booking_info.get('players', [])
-                players_or_reason = ", ".join(players_list)
+                players_list = booking_info.get('players', []) # Isso é uma lista de dicionários agora
+                formatted_players = []
+                for player in players_list:
+                    player_name = player.get('name', 'N/A')
+                    player_type = player.get('type', 'N/A')
+                    formatted_players.append(f"{player_name} - ({player_type})")
+                players_or_reason = ", ".join(formatted_players)
 
             writer.writerow([
                 timestamp,
@@ -1112,15 +1164,19 @@ def export_daily_logs_csv():
 @role_required(['admin', 'operator', 'semi-admin']) # Semi-admin pode adicionar à lista de espera
 def api_add_to_waiting_list():
     data = request.get_json()
-    players = [p.strip() for p in data.get('players', []) if p.strip()]
+    players = data.get('players', []) # Recebe a lista de objetos {name, type}
+    
+    # Filtra jogadores vazios para a validação
+    valid_players = [p for p in players if p.get('name', '').strip()]
+
     preferred_court = data.get('preferred_court') or None
     preferred_time = data.get('preferred_time') or None
 
     # MODIFICAÇÃO AQUI: Permite de 2 a 6 jogadores na lista de espera
-    if not players or (len(players) < 2 or len(players) > 6):
+    if not valid_players or (len(valid_players) < 2 or len(valid_players) > 6):
         return jsonify({"success": False, "message": "É obrigatório ter entre 2 e 6 integrantes para a lista de espera."}), 400
 
-    success, message = add_to_waiting_list_db(players, preferred_court, preferred_time)
+    success, message = add_to_waiting_list_db(valid_players, preferred_court, preferred_time)
     return jsonify({"success": success, "message": message})
 
 @app.route('/api/remove_from_waiting_list', methods=['POST'])
@@ -1146,7 +1202,9 @@ def api_get_waiting_list():
     serializable_waiting_list = []
     for entry in waiting_list_data:
         serializable_entry = entry.copy()
-        serializable_entry['requestedAt'] = serializable_entry['requestedAt'].isoformat()
+        # Converte datetime para string ISO
+        if isinstance(serializable_entry['requestedAt'], datetime):
+            serializable_entry['requestedAt'] = serializable_entry['requestedAt'].isoformat()
         serializable_waiting_list.append(serializable_entry)
     return jsonify({"waiting_list": serializable_waiting_list}), 200
 

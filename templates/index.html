@@ -486,7 +486,7 @@
             <span class="close-button" onclick="closeBookingModal()">&times;</span>
             <h2>Agendar Quadra <span id="modalCourtId"></span></h2>
             
-            <form action="{{ url_for('book_court') }}" method="post">
+            <form action="{{ url_for('book_court') }}" method="post" id="bookingForm">
                 <input type="hidden" name="courtId" id="formCourtId">
                 <!-- Removido o input hidden 'formStartTime' -->
 
@@ -629,8 +629,9 @@
             for (let i = 0; i < currentPlayerCount; i++) {
                 const inputGroup = document.createElement('div');
                 inputGroup.className = 'player-input-group';
+                // SOLUÇÃO FINAL: O nome do campo de texto é indexado para corresponder ao que o servidor espera
                 inputGroup.innerHTML = `
-                    <input type="text" name="players" placeholder="Nome do Integrante ${i + 1}" required>
+                    <input type="text" name="players[${i}]" placeholder="Nome do Integrante ${i + 1}">
                     <div class="player-type-radio">
                         <label><input type="radio" name="playerType_${i}" value="Associado" checked> A</label>
                         <label><input type="radio" name="playerType_${i}" value="Familiar"> F</label>
@@ -642,24 +643,72 @@
             }
         }
 
+        // Função para alterar a contagem de jogadores, preservando os dados digitados.
         function changePlayerCount(delta) {
             const newCount = currentPlayerCount + delta;
-            if (newCount >= 2 && newCount <= 6) { // Changed max to 6
+            if (newCount >= 2 && newCount <= 6) {
+                const playerInputsDiv = document.getElementById('playerInputs');
+                const allPlayerGroups = playerInputsDiv.querySelectorAll('.player-input-group');
+                const values = [];
+                allPlayerGroups.forEach(group => {
+                    const nameInput = group.querySelector('input[type="text"]');
+                    const typeInput = group.querySelector('input[type="radio"]:checked');
+                    if (nameInput && typeInput) {
+                        values.push({ name: nameInput.value, type: typeInput.value });
+                    }
+                });
+
                 currentPlayerCount = newCount;
                 document.getElementById('playerCount').innerText = currentPlayerCount;
                 renderPlayerInputs();
+
+                const newPlayerGroups = playerInputsDiv.querySelectorAll('.player-input-group');
+                newPlayerGroups.forEach((group, index) => {
+                    if (values[index]) {
+                        group.querySelector('input[type="text"]').value = values[index].name;
+                        const radioToSelect = group.querySelector(`input[type="radio"][value="${values[index].type}"]`);
+                        if (radioToSelect) radioToSelect.checked = true;
+                    }
+                });
             } else if (newCount < 2) {
                 alert("Mínimo de 2 integrantes.");
-            } else if (newCount > 6) { // Changed max to 6
+            } else if (newCount > 6) {
                 alert("Máximo de 6 integrantes.");
             }
         }
 
+        // Função para remover um jogador, preservando os dados e reindexando os campos.
         function removePlayerField(buttonElement) {
             if (currentPlayerCount > 2) {
-                buttonElement.closest('.player-input-group').remove();
+                const playerInputsDiv = document.getElementById('playerInputs');
+                const allPlayerGroups = Array.from(playerInputsDiv.querySelectorAll('.player-input-group'));
+                const groupToRemove = buttonElement.closest('.player-input-group');
+
+                const values = [];
+                allPlayerGroups.forEach(group => {
+                    if (group !== groupToRemove) {
+                        const nameInput = group.querySelector('input[type="text"]');
+                        const typeInput = group.querySelector('input[type="radio"]:checked');
+                        if (nameInput && typeInput) {
+                            values.push({ name: nameInput.value, type: typeInput.value });
+                        }
+                    }
+                });
+
                 currentPlayerCount--;
                 document.getElementById('playerCount').innerText = currentPlayerCount;
+                renderPlayerInputs();
+
+                const newPlayerGroups = playerInputsDiv.querySelectorAll('.player-input-group');
+                newPlayerGroups.forEach((group, index) => {
+                    if (values[index]) {
+                        group.querySelector('input[type="text"]').value = values[index].name;
+                        const radioToSelect = group.querySelector(`input[type="radio"][value="${values[index].type}"]`);
+                        if (radioToSelect) {
+                            radioToSelect.checked = true;
+                        }
+                    }
+                });
             }
         }
 
@@ -680,7 +729,7 @@
                     const inputGroup = document.createElement('div');
                     inputGroup.className = 'player-input-group';
                     inputGroup.innerHTML = `
-                        <input type="text" name="waiting_players_input" placeholder="Nome do Integrante ${i + 1}" required>
+                        <input type="text" name="waiting_players_input" placeholder="Nome do Integrante ${i + 1}">
                         <div class="player-type-radio">
                             <label><input type="radio" name="waitingPlayerType_${i}" value="Associado" checked> A</label>
                             <label><input type="radio" name="waitingPlayerType_${i}" value="Familiar"> F</label>
@@ -697,22 +746,68 @@
 
         function changeWaitingPlayerCount(delta) {
             const newCount = currentWaitingPlayerCount + delta;
-            if (newCount >= 2 && newCount <= 6) { // Changed max to 6
+            if (newCount >= 2 && newCount <= 6) {
+                const playerInputsDiv = document.getElementById('waitingPlayerInputs');
+                const allPlayerGroups = playerInputsDiv.querySelectorAll('.player-input-group');
+                const values = [];
+                allPlayerGroups.forEach(group => {
+                    const nameInput = group.querySelector('input[type="text"]');
+                    const typeInput = group.querySelector('input[type="radio"]:checked');
+                    if (nameInput && typeInput) {
+                        values.push({ name: nameInput.value, type: typeInput.value });
+                    }
+                });
+
                 currentWaitingPlayerCount = newCount;
                 document.getElementById('waitingPlayerCount').innerText = currentWaitingPlayerCount;
                 renderWaitingListInputs();
+
+                const newPlayerGroups = playerInputsDiv.querySelectorAll('.player-input-group');
+                newPlayerGroups.forEach((group, index) => {
+                    if (values[index]) {
+                        group.querySelector('input[type="text"]').value = values[index].name;
+                        const radioToSelect = group.querySelector(`input[type="radio"][value="${values[index].type}"]`);
+                        if (radioToSelect) radioToSelect.checked = true;
+                    }
+                });
             } else if (newCount < 2) {
                 alert("Mínimo de 2 integrantes para a lista de espera.");
-            } else if (newCount > 6) { // Changed max to 6
+            } else if (newCount > 6) {
                 alert("Máximo de 6 integrantes para a lista de espera.");
             }
         }
 
         function removeWaitingPlayerField(buttonElement) {
             if (currentWaitingPlayerCount > 2) {
-                buttonElement.closest('.player-input-group').remove();
+                const playerInputsDiv = document.getElementById('waitingPlayerInputs');
+                const allPlayerGroups = Array.from(playerInputsDiv.querySelectorAll('.player-input-group'));
+                const groupToRemove = buttonElement.closest('.player-input-group');
+
+                const values = [];
+                allPlayerGroups.forEach(group => {
+                    if (group !== groupToRemove) {
+                        const nameInput = group.querySelector('input[type="text"]');
+                        const typeInput = group.querySelector('input[type="radio"]:checked');
+                        if (nameInput && typeInput) {
+                            values.push({ name: nameInput.value, type: typeInput.value });
+                        }
+                    }
+                });
+
                 currentWaitingPlayerCount--;
                 document.getElementById('waitingPlayerCount').innerText = currentWaitingPlayerCount;
+                renderWaitingListInputs();
+
+                const newPlayerGroups = playerInputsDiv.querySelectorAll('.player-input-group');
+                newPlayerGroups.forEach((group, index) => {
+                    if (values[index]) {
+                        group.querySelector('input[type="text"]').value = values[index].name;
+                        const radioToSelect = group.querySelector(`input[type="radio"][value="${values[index].type}"]`);
+                        if (radioToSelect) {
+                            radioToSelect.checked = true;
+                        }
+                    }
+                });
             }
         }
 
@@ -720,9 +815,11 @@
         async function addWaitingEntry() {
             const playerInputs = document.querySelectorAll('#waitingPlayerInputs input[name="waiting_players_input"]');
             const players = [];
+            let validPlayerCount = 0;
             for (let i = 0; i < playerInputs.length; i++) {
                 const playerName = playerInputs[i].value.trim();
                 if (playerName) {
+                    validPlayerCount++;
                     const playerType = document.querySelector(`input[name="waitingPlayerType_${i}"]:checked`).value;
                     players.push({ name: playerName, type: playerType });
                 }
@@ -731,7 +828,7 @@
             const preferredCourt = document.getElementById('waiting_preferred_court_select').value;
             const preferredTime = document.getElementById('waiting_preferred_time_input').value;
 
-            if (players.length < 2 || players.length > 6) { // Updated validation to 6
+            if (validPlayerCount < 2 || validPlayerCount > 6) {
                 alert("É obrigatório ter entre 2 e 6 integrantes para a lista de espera.");
                 return;
             }
@@ -753,7 +850,7 @@
                     alert(result.message);
                     await updateWaitingListDisplay(); // Recarrega a lista para mostrar a nova entrada
                     // Limpa o formulário após adicionar
-                    playerInputs.forEach(input => input.value = '');
+                    document.querySelectorAll('#waitingPlayerInputs input[type="text"]').forEach(input => input.value = '');
                     document.getElementById('waiting_preferred_court_select').value = '';
                     document.getElementById('waiting_preferred_time_input').value = '';
                     currentWaitingPlayerCount = 2; // Reseta a contagem
@@ -874,52 +971,40 @@
                         const bookingStartTime = new Date(booking.startTime);
                         const bookingEndTime = new Date(booking.endTime);
 
-                        // If there's a gap before this booking
                         if (currentTimePointer < bookingStartTime) {
-                            const freeSlotEndTime = new Date(bookingStartTime.getTime() - (1 * 60 * 1000)); // 1 minute before booking starts
-                            const freeSlotDurationMinutes = (freeSlotEndTime.getTime() - currentTimePointer.getTime()) / (60 * 1000);
+                            let freeSlotStartTimeForDisplay = new Date(currentTimePointer.getTime());
+                            if (freeSlotStartTimeForDisplay.getTime() !== dayStart.getTime()) {
+                                freeSlotStartTimeForDisplay.setMinutes(freeSlotStartTimeForDisplay.getMinutes() + 1);
+                            }
+                            
+                            const freeSlotEndTimeForDisplay = new Date(bookingStartTime.getTime());
+                            const freeSlotDurationMinutes = (freeSlotEndTimeForDisplay.getTime() - freeSlotStartTimeForDisplay.getTime()) / (60 * 1000);
 
-                            // Only display if the free slot is 30 minutes or longer
                             if (freeSlotDurationMinutes >= 30) { 
-                                let suggestedModalStartTime = new Date(currentTimePointer); // Start with the current pointer (end of previous booking or day start)
+                                let suggestedModalStartTime = new Date(freeSlotStartTimeForDisplay.getTime());
 
-                                // If this free slot is immediately after a *previous booking*,
-                                // the suggested start time for a *new* booking should be 1 minute after that previous booking's end.
-                                // currentTimePointer already holds the end time of the previous booking.
-                                // So, if currentTimePointer is not the absolute start of the day (8:00 AM), add 1 minute.
-                                if (courtBookingsForDate.length > 0 && currentTimePointer.getTime() > dayStart.getTime()) {
-                                    suggestedModalStartTime = new Date(currentTimePointer.getTime() + (1 * 60 * 1000));
-                                }
-
-                                // If the suggested start time is in the past (for today), set it to the current time.
-                                // This handles cases where the free slot started in the past, but we want to book from now.
                                 if (suggestedModalStartTime < now && suggestedModalStartTime.toDateString() === now.toDateString()) {
                                     suggestedModalStartTime = now;
                                 }
                                 
-                                // Round to nearest minute for display consistency in the modal
                                 suggestedModalStartTime.setSeconds(0);
                                 suggestedModalStartTime.setMilliseconds(0);
 
-                                // If the free slot itself (from currentTimePointer to freeSlotEndTime) is entirely in the past,
-                                // mark it as faded-past and disable click.
-                                const isFreeSlotPast = now > freeSlotEndTime;
+                                const isFreeSlotPast = now > freeSlotEndTimeForDisplay;
 
                                 const freeItem = document.createElement('div');
                                 freeItem.className = 'booking-item free-slot';
                                 if (isFreeSlotPast) {
                                     freeItem.classList.add('faded-past');
-                                    freeItem.onclick = null; // Disable click for past free slots
+                                    freeItem.onclick = null;
                                 } else {
                                     freeItem.onclick = () => openBookingModal(courtName, suggestedModalStartTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }));
                                 }
-                                // Display the actual start and end of the *free slot period* (only time)
-                                freeItem.innerHTML = `${currentTimePointer.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})} - ${freeSlotEndTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}<br>Livre`;
+                                freeItem.innerHTML = `${freeSlotStartTimeForDisplay.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})} - ${freeSlotEndTimeForDisplay.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}<br>Livre`;
                                 bookingListDiv.appendChild(freeItem);
                             }
                         }
 
-                        // Add the actual booking item
                         const bookingItem = document.createElement('div');
                         bookingItem.className = 'booking-item';
                         
@@ -934,16 +1019,11 @@
                             statusClass = 'block-booking';
                         } else {
                             let playersToDisplayString = '';
-                            // Verifica se o array 'players' está disponível e tem conteúdo
-                            // NOTA: Para que o tipo "Associado" seja exibido corretamente,
-                            // o backend (Flask) deve fornecer a lista de jogadores no objeto 'booking'
-                            // com a estrutura [{name: "Nome", type: "Associado"}, ...]
                             if (booking.players && Array.isArray(booking.players) && booking.players.length > 0) {
-                                // Ordena jogadores: Associado primeiro
                                 const sortedPlayers = [...booking.players].sort((a, b) => {
                                     if (a.type === 'Associado' && b.type !== 'Associado') return -1;
                                     if (a.type !== 'Associado' && b.type === 'Associado') return 1;
-                                    return 0; // Mantém a ordem original para o mesmo tipo
+                                    return 0;
                                 });
 
                                 playersToDisplayString = sortedPlayers.map(p => {
@@ -953,8 +1033,6 @@
                                     return p.name;
                                 }).join(', ');
                             } else {
-                                // Fallback para agendamentos antigos ou se o backend não fornecer o array 'players' estruturado.
-                                // Assume que a primeira linha do 'content' contém os nomes dos jogadores.
                                 playersToDisplayString = (booking.content.split('<br>')[0] || 'Jogadores Desconhecidos');
                             }
 
@@ -969,7 +1047,7 @@
                                 statusClass = 'alert-yellow';
                             } else {
                                 bookingStatusText = "Em Jogo";
-                                statusClass = 'confirmed'; 
+                                statusClass = 'playing'; 
                             }
                             
                             content = `${playersToDisplayString}<br>${startDisplay} - ${endDisplay}<br><strong>${bookingStatusText}</strong>`;
@@ -977,50 +1055,42 @@
                         
                         bookingItem.classList.add(statusClass);
                         bookingItem.innerHTML = content; 
-                        // Disable click for booked/blocked slots
                         bookingItem.onclick = null; 
                         bookingListDiv.appendChild(bookingItem);
 
                         currentTimePointer = new Date(bookingEndTime);
                     });
 
-                    // Add a final free slot if there's time remaining after the last booking
                     if (currentTimePointer < dayEnd) {
-                        const freeSlotEndTime = dayEnd; // The end of the day
-                        const freeSlotDurationMinutes = (freeSlotEndTime.getTime() - currentTimePointer.getTime()) / (60 * 1000);
+                        let freeSlotStartTimeForDisplay = new Date(currentTimePointer.getTime());
+                        if (courtBookingsForDate.length > 0) {
+                            freeSlotStartTimeForDisplay.setMinutes(freeSlotStartTimeForDisplay.getMinutes() + 1);
+                        }
 
-                        // Only display if the free slot is 30 minutes or longer
+                        const freeSlotEndTimeForDisplay = dayEnd;
+                        const freeSlotDurationMinutes = (freeSlotEndTimeForDisplay.getTime() - freeSlotStartTimeForDisplay.getTime()) / (60 * 1000);
+
                         if (freeSlotDurationMinutes >= 30) { 
-                            let suggestedModalStartTime = new Date(currentTimePointer);
-
-                            // If there were any bookings before this final free slot,
-                            // the suggested start time for a new booking should be 1 minute after the last booking's end.
-                            // currentTimePointer already holds the end time of the last booking.
-                            if (courtBookingsForDate.length > 0) { // If there was at least one booking
-                                suggestedModalStartTime = new Date(currentTimePointer.getTime() + (1 * 60 * 1000));
-                            }
+                            let suggestedModalStartTime = new Date(freeSlotStartTimeForDisplay.getTime());
                             
-                            // If the suggested start time is in the past (for today), set it to the current time.
                             if (suggestedModalStartTime < now && suggestedModalStartTime.toDateString() === now.toDateString()) {
                                 suggestedModalStartTime = now;
                             }
-
-                            // Round to nearest minute
+                            
                             suggestedModalStartTime.setSeconds(0);
                             suggestedModalStartTime.setMilliseconds(0);
 
-                            // If the free slot itself is entirely in the past, mark as faded-past
-                            const isFreeSlotPast = now > freeSlotEndTime;
+                            const isFreeSlotPast = now > freeSlotEndTimeForDisplay;
 
                             const freeItem = document.createElement('div');
                             freeItem.className = 'booking-item free-slot';
                             if (isFreeSlotPast) {
                                 freeItem.classList.add('faded-past');
-                                freeItem.onclick = null; // Disable click for past free slots
+                                freeItem.onclick = null;
                             } else {
                                 freeItem.onclick = () => openBookingModal(courtName, suggestedModalStartTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }));
                             }
-                            freeItem.innerHTML = `${currentTimePointer.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})} - ${freeSlotEndTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}<br>Livre`;
+                            freeItem.innerHTML = `${freeSlotStartTimeForDisplay.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})} - ${freeSlotEndTimeForDisplay.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}<br>Livre`;
                             bookingListDiv.appendChild(freeItem);
                         }
                     }
@@ -1052,6 +1122,13 @@
             loadBookingsForDate(currentDisplayDate);
             updateWaitingListDisplay(); // Load waiting list on page load
             renderWaitingListInputs(); // Render initial waiting list player inputs
+
+            const bookingForm = document.getElementById('bookingForm');
+            if(bookingForm) {
+                // SOLUÇÃO FINAL: Removida a lógica de desativação e validação do lado do cliente.
+                // A correção agora está na função renderPlayerInputs, que nomeia os campos corretamente.
+                // O formulário será submetido normalmente, e o servidor (app.py) fará a validação.
+            }
         });
     </script>
 </body>

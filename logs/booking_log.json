@@ -1,0 +1,24 @@
+[
+    {
+        "timestamp": "2025-07-28T14:06:27.133130",
+        "event_type": "booked",
+        "username": "admin",
+        "details": {
+            "courtId": "QUADRA 3",
+            "startTime": "2025-07-28T14:06:00",
+            "endTime": "2025-07-28T14:56:00",
+            "players": [
+                {
+                    "name": "mario",
+                    "type": "Associado"
+                },
+                {
+                    "name": "cesar",
+                    "type": "Associado"
+                }
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        }
+    }
+]

@@ -82,5 +82,258 @@
             "blockBookingReason": ""
         },
         "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:01:21.716693",
+        "event_type": "booked",
+        "booking_info": {
+            "courtId": "QUADRA 4",
+            "startTime": "2025-07-28T16:01:00",
+            "endTime": "2025-07-28T16:50:00",
+            "players": [
+                {
+                    "name": "mario",
+                    "type": "Associado"
+                },
+                {
+                    "name": "franco",
+                    "type": "Associado"
+                }
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:04:44.989310",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 12,
+            "courtId": "QUADRA 1",
+            "startTime": "2025-07-28T12:01:00",
+            "endTime": "2025-07-28T12:50:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:04:47.103601",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 11,
+            "courtId": "QUADRA 1",
+            "startTime": "2025-07-28T11:11:00",
+            "endTime": "2025-07-28T12:00:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:04:49.151663",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 10,
+            "courtId": "QUADRA 2",
+            "startTime": "2025-07-28T11:48:00",
+            "endTime": "2025-07-28T12:37:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:04:50.956853",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 8,
+            "courtId": "QUADRA 3",
+            "startTime": "2025-07-28T10:45:00",
+            "endTime": "2025-07-28T11:17:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:04:52.667828",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 9,
+            "courtId": "QUADRA 2",
+            "startTime": "2025-07-28T10:58:00",
+            "endTime": "2025-07-28T11:47:00",
+            "players": [
+                "mario",
+                "cesar",
+                "mario",
+                "reserva",
+                "mario",
+                "312"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:04:53.979564",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 4,
+            "courtId": "QUADRA 7",
+            "startTime": "2025-07-25T16:06:00",
+            "endTime": "2025-07-25T16:55:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:04:55.345175",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 2,
+            "courtId": "QUADRA 1",
+            "startTime": "2025-07-25T16:55:00",
+            "endTime": "2025-07-25T17:44:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:04:56.636388",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 6,
+            "courtId": "QUADRA 6",
+            "startTime": "2025-07-25T16:06:00",
+            "endTime": "2025-07-25T16:55:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:04:57.822028",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 7,
+            "courtId": "QUADRA 2",
+            "startTime": "2025-07-25T16:15:00",
+            "endTime": "2025-07-25T17:04:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:04:59.066424",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 5,
+            "courtId": "QUADRA 7",
+            "startTime": "2025-07-25T16:56:00",
+            "endTime": "2025-07-25T17:45:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:05:00.220431",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 3,
+            "courtId": "QUADRA 1",
+            "startTime": "2025-07-25T17:45:00",
+            "endTime": "2025-07-25T18:34:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:05:01.570240",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 13,
+            "courtId": "QUADRA 3",
+            "startTime": "2025-07-28T14:06:00",
+            "endTime": "2025-07-28T14:56:00",
+            "players": [
+                {
+                    "name": "mario",
+                    "type": "Associado"
+                },
+                {
+                    "name": "cesar",
+                    "type": "Associado"
+                }
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
+    },
+    {
+        "timestamp": "2025-07-28T16:05:02.928695",
+        "event_type": "cancelled",
+        "booking_info": {
+            "id": 1,
+            "courtId": "QUADRA 1",
+            "startTime": "2025-07-25T16:05:00",
+            "endTime": "2025-07-25T16:54:00",
+            "players": [
+                "mario",
+                "cesar"
+            ],
+            "isBlockBooking": false,
+            "blockBookingReason": ""
+        },
+        "performed_by": "admin"
     }
 ]

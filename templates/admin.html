@@ -461,7 +461,8 @@
                             {% if booking.isBlockBooking %}
                                 {{ booking.blockBookingReason }}
                             {% else %}
-                                {{ ', '.join(booking.players) }}
+                                <!-- SOLUÇÃO: Extrai o nome de cada objeto de jogador antes de juntar -->
+                                {{ booking.players | map(attribute='name') | join(', ') }}
                             {% endif %}
                         </td>
                         <td>
