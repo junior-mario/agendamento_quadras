@@ -97,7 +97,7 @@ def initialize_db_schema():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'viewer' -- 'admin', 'operator', 'viewer'
+            role TEXT NOT NULL DEFAULT 'viewer' -- 'admin', 'operator', 'viewer', 'semi-admin'
         )
     """)
     conn.commit()
@@ -106,7 +106,8 @@ def initialize_db_schema():
     users_to_create = [
         ("admin", "admin", "admin"),
         ("operador", "operador", "operator"),
-        ("monitor", "monitor", "viewer")
+        ("monitor", "monitor", "viewer"),
+        ("semiadmin", "semiadminpass", "semi-admin") # Adicionado o novo perfil semi-admin
     ]
 
     for username, password, role in users_to_create:
@@ -521,9 +522,9 @@ def role_required(roles):
             if g.user['role'] not in roles:
                 flash(f"Seu perfil '{g.user['role']}' não tem permissão para acessar esta página.", "error")
                 # Redireciona para uma página baseada no perfil, ou para a raiz
-                if g.user['role'] == 'operator':
+                if g.user['role'] == 'operator' or g.user['role'] == 'semi-admin': # Operador e semi-admin voltam para index
                     return redirect(url_for('index'))
-                elif g.user['role'] == 'viewer':
+                elif g.user['role'] == 'viewer': # Viewer vai para tv_view
                     return redirect(url_for('tv_view'))
                 else: # Default para admin ou outros roles sem uma página específica
                     return redirect(url_for('index'))
@@ -536,11 +537,11 @@ def role_required(roles):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if g.user: # Se já estiver logado, redireciona para a página principal
-        if g.user['role'] == 'admin':
+        if g.user['role'] == 'admin' or g.user['role'] == 'semi-admin': # Admin e Semi-admin vão para o painel
             return redirect(url_for('admin_panel'))
-        elif g.user['role'] == 'operator':
+        elif g.user['role'] == 'operator': # Operador vai para a página de agendamento
             return redirect(url_for('index'))
-        else: # viewer
+        else: # viewer vai para a TV
             return redirect(url_for('tv_view'))
 
     if request.method == 'POST':
@@ -551,11 +552,11 @@ def login():
         if user and check_password_hash(user['password_hash'], password):
             session['user_id'] = user['id']
             flash("Login bem-sucedido!", "success")
-            if user['role'] == 'admin':
+            if user['role'] == 'admin' or user['role'] == 'semi-admin': # Admin e Semi-admin vão para o painel
                 return redirect(url_for('admin_panel'))
-            elif user['role'] == 'operator':
+            elif user['role'] == 'operator': # Operador vai para a página de agendamento
                 return redirect(url_for('index'))
-            else: # viewer
+            else: # viewer vai para a TV
                 return redirect(url_for('tv_view'))
         else:
             flash("Nome de usuário ou senha inválidos.", "error")
@@ -572,7 +573,7 @@ def logout():
 # --- Rotas Principais (com controle de acesso) ---
 @app.route('/')
 @login_required
-@role_required(['admin', 'operator'])
+@role_required(['admin', 'operator', 'semi-admin']) # Semi-admin pode agendar
 def index():
     # Get selected date from query parameter, default to today
     selected_date_str = request.args.get('selected_date')
@@ -595,7 +596,7 @@ def index():
 
 @app.route('/api/index_data')
 @login_required
-@role_required(['admin', 'operator'])
+@role_required(['admin', 'operator', 'semi-admin']) # Semi-admin pode ver dados do index
 def api_index_data():
     print("API: /api/index_data chamada.")
     try:
@@ -680,7 +681,7 @@ def api_index_data():
 
 @app.route('/book', methods=['POST'])
 @login_required
-@role_required(['admin', 'operator'])
+@role_required(['admin', 'operator', 'semi-admin']) # Semi-admin pode agendar
 def book_court():
     court_id = request.form['courtId']
     # Alterado para pegar a data e a hora separadamente
@@ -689,8 +690,9 @@ def book_court():
     players_raw = request.form.getlist('players')
     players = [p.strip() for p in players_raw if p.strip()]
 
-    if not players or len(players) < 2 or len(players) > 4:
-        flash("É obrigatório ter 2 ou 4 integrantes para o jogo.", "error")
+    # MODIFICAÇÃO AQUI: Permite de 2 a 6 jogadores
+    if not players or len(players) < 2 or len(players) > 6:
+        flash("É obrigatório ter entre 2 e 6 integrantes para o jogo.", "error")
         return redirect(url_for('index'))
 
     try:
@@ -720,7 +722,7 @@ def book_court():
 
 @app.route('/admin', methods=['GET', 'POST'])
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'semi-admin']) # Semi-admin pode acessar o painel de administração
 def admin_panel():
     settings = get_settings_db()
     all_bookings = get_bookings_db()
@@ -729,8 +731,11 @@ def admin_panel():
     all_users = get_all_users() 
 
     if request.method == 'POST':
-        # Gerenciamento de Usuários
+        # Gerenciamento de Usuários (APENAS ADMIN)
         if 'create_user' in request.form:
+            if g.user['role'] != 'admin': # Verificação adicional para segurança
+                flash("Você não tem permissão para criar usuários.", "error")
+                return redirect(url_for('admin_panel'))
             username = request.form['new_username']
             password = request.form['new_password']
             role = request.form['new_role']
@@ -739,6 +744,9 @@ def admin_panel():
             return redirect(url_for('admin_panel'))
         
         elif 'edit_user' in request.form:
+            if g.user['role'] != 'admin': # Verificação adicional para segurança
+                flash("Você não tem permissão para editar usuários.", "error")
+                return redirect(url_for('admin_panel'))
             user_id = int(request.form['edit_user_id'])
             username = request.form['edit_username']
             role = request.form['edit_role']
@@ -748,6 +756,9 @@ def admin_panel():
             return redirect(url_for('admin_panel'))
 
         elif 'delete_user' in request.form:
+            if g.user['role'] != 'admin': # Verificação adicional para segurança
+                flash("Você não tem permissão para apagar usuários.", "error")
+                return redirect(url_for('admin_panel'))
             user_id = int(request.form['delete_user_id'])
             if user_id == g.user['id']: # Impedir que o admin apague a si mesmo
                 flash("Você não pode apagar sua própria conta.", "error")
@@ -756,7 +767,7 @@ def admin_panel():
                 flash(message, "success" if success else "error")
             return redirect(url_for('admin_panel'))
 
-        # Restante das operações do admin_panel (já existentes)
+        # Restante das operações do admin_panel (acessíveis por admin e semi-admin)
         elif 'update_duration' in request.form:
             new_duration = int(request.form['new_duration'])
             update_settings_db(new_duration)
@@ -822,14 +833,14 @@ def admin_panel():
 
 @app.route('/tv_view')
 @login_required
-@role_required(['admin', 'viewer'])
+@role_required(['admin', 'viewer', 'operator', 'semi-admin']) # Semi-admin e Operator podem ver a TV
 def tv_view():
     # Esta rota agora apenas renderiza o template que buscará os dados da API
     return render_template('tv_view.html')
 
 @app.route('/api/dashboard_data')
 @login_required
-@role_required(['admin', 'viewer'])
+@role_required(['admin', 'viewer', 'operator', 'semi-admin']) # Semi-admin e Operator podem ver dados do dashboard
 def api_dashboard_data():
     print("API: /api/dashboard_data chamada.")
     try:
@@ -927,7 +938,7 @@ def api_dashboard_data():
 
 @app.route('/statistics')
 @login_required
-@role_required(['admin']) # Somente admin pode ver estatísticas
+@role_required(['admin', 'semi-admin']) # Semi-admin pode ver estatísticas
 def statistics_panel():
     all_bookings = get_bookings_db()
 
@@ -1003,7 +1014,7 @@ def log_booking_event(event_type, booking_info, performed_by_user):
 # --- Rota para visualização de Logs ---
 @app.route('/admin/get_daily_logs', methods=['POST'])
 @login_required
-@role_required(['admin']) # Apenas administradores podem ver os logs
+@role_required(['admin', 'semi-admin']) # Semi-admin pode consultar logs
 def get_daily_logs():
     data = request.get_json()
     selected_date_str = data.get('date')
@@ -1028,7 +1039,7 @@ def get_daily_logs():
 # --- Rota para exportação de Logs CSV ---
 @app.route('/admin/export_daily_logs_csv', methods=['POST'])
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'semi-admin']) # Semi-admin pode exportar logs
 def export_daily_logs_csv():
     data = request.get_json()
     selected_date_str = data.get('date')
@@ -1098,22 +1109,23 @@ def export_daily_logs_csv():
 # Rotas API para a Lista de Espera (para serem chamadas por JS)
 @app.route('/api/add_to_waiting_list', methods=['POST'])
 @login_required
-@role_required(['admin', 'operator'])
+@role_required(['admin', 'operator', 'semi-admin']) # Semi-admin pode adicionar à lista de espera
 def api_add_to_waiting_list():
     data = request.get_json()
     players = [p.strip() for p in data.get('players', []) if p.strip()]
     preferred_court = data.get('preferred_court') or None
     preferred_time = data.get('preferred_time') or None
 
-    if not players or (len(players) != 2 and len(players) != 4):
-        return jsonify({"success": False, "message": "É obrigatório ter 2 ou 4 integrantes para a lista de espera."}), 400
+    # MODIFICAÇÃO AQUI: Permite de 2 a 6 jogadores na lista de espera
+    if not players or (len(players) < 2 or len(players) > 6):
+        return jsonify({"success": False, "message": "É obrigatório ter entre 2 e 6 integrantes para a lista de espera."}), 400
 
     success, message = add_to_waiting_list_db(players, preferred_court, preferred_time)
     return jsonify({"success": success, "message": message})
 
 @app.route('/api/remove_from_waiting_list', methods=['POST'])
 @login_required
-@role_required(['admin', 'operator'])
+@role_required(['admin', 'operator', 'semi-admin']) # Semi-admin pode remover da lista de espera
 def api_remove_from_waiting_list():
     data = request.get_json()
     entry_id = data.get('entry_id')
@@ -1127,7 +1139,7 @@ def api_remove_from_waiting_list():
 # Rota API para obter a lista de espera (necessária para updateWaitingListDisplay)
 @app.route('/api/get_waiting_list', methods=['GET'])
 @login_required
-@role_required(['admin', 'operator'])
+@role_required(['admin', 'operator', 'semi-admin']) # Semi-admin pode obter a lista de espera
 def api_get_waiting_list():
     waiting_list_data = get_waiting_list_db()
     # Converte objetos datetime para string ISO para JSON serialização

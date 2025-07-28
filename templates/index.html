@@ -311,6 +311,7 @@
             border-radius: 5px;
             text-align: center;
             font-weight: bold;
+            font-size: 0.9em;
         }
         .message.success {
             background-color: var(--message-success-bg);
@@ -324,9 +325,11 @@
             display: flex;
             align-items: center;
             margin-bottom: 10px;
+            gap: 10px; /* Adicionado espaço entre o input e os radios */
         }
-        .player-input-group input {
+        .player-input-group input[type="text"] {
             flex-grow: 1;
+            width: auto; /* Permite que o flex-grow funcione */
         }
         .player-input-group button {
             background-color: var(--color-red-delete);
@@ -356,6 +359,30 @@
         .player-count-control span {
             font-weight: bold;
         }
+
+        /* Estilos para os radio buttons de tipo de integrante */
+        .player-type-radio {
+            display: flex;
+            gap: 8px; /* Espaço entre os radio buttons */
+            align-items: center;
+            font-size: 0.9em;
+            color: var(--color-text-darkgray);
+        }
+        .player-type-radio label {
+            margin-bottom: 0; /* Remover margem padrão do label */
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .player-type-radio input[type="radio"] {
+            margin-right: 3px;
+            width: auto; /* Override width: calc(100% - 22px); */
+            padding: 0; /* Override padding */
+            border: none; /* Override border */
+            height: auto; /* Override height */
+        }
+
 
         /* Estilos específicos para a Lista de Espera */
         .waiting-list-item {
@@ -417,10 +444,10 @@
 
         <div class="navbar">
             <a href="{{ url_for('index') }}" class="active">Agendamento</a>
-            {% if g.user and (g.user.role == 'admin' or g.user.role == 'viewer') %}
+            {% if g.user and (g.user.role == 'admin' or g.user.role == 'viewer' or g.user.role == 'semi-admin') %}
             <a href="{{ url_for('tv_view') }}">Visão TV</a>
             {% endif %}
-            {% if g.user and g.user.role == 'admin' %}
+            {% if g.user and (g.user.role == 'admin' or g.user.role == 'semi-admin') %}
             <a href="{{ url_for('admin_panel') }}">Administração</a>
             <a href="{{ url_for('statistics_panel') }}">Estatísticas</a>
             {% endif %}
@@ -477,7 +504,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Integrantes (2 ou 4):</label>
+                    <label>Integrantes (2 a 6):</label>
                     <div class="player-count-control">
                         <button type="button" onclick="changePlayerCount(-1)">-</button>
                         <span id="playerCount">2</span>
@@ -493,6 +520,47 @@
                     <button type="submit" class="submit">Confirmar Agendamento</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Waiting List Section -->
+    <div class="container" style="margin-top: 20px;">
+        <h2>Lista de Espera</h2>
+        <div class="waiting-list-form">
+            <h3>Adicionar à Lista de Espera</h3>
+            <div class="form-group">
+                <label>Integrantes (2 a 6):</label>
+                <div class="player-count-control">
+                    <button type="button" onclick="changeWaitingPlayerCount(-1)">-</button>
+                    <span id="waitingPlayerCount">2</span>
+                    <button type="button" onclick="changeWaitingPlayerCount(1)">+</button>
+                </div>
+                <div id="waitingPlayerInputs">
+                    <!-- Player input fields for waiting list will be added here by JavaScript -->
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="waiting_preferred_court_select">Quadra Preferida (Opcional):</label>
+                <select id="waiting_preferred_court_select">
+                    <option value="">Qualquer Quadra</option>
+                    {% for court in courts %}
+                        <option value="{{ court }}">{{ court }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="waiting_preferred_time_input">Horário Preferido (Opcional):</label>
+                <input type="time" id="waiting_preferred_time_input">
+            </div>
+            <div class="button-group">
+                <button type="button" class="submit" onclick="addWaitingEntry()">Adicionar à Lista</button>
+            </div>
+        </div>
+
+        <h3>Entradas Atuais na Lista de Espera</h3>
+        <div id="currentWaitingList">
+            <!-- Waiting list entries will be populated via JavaScript -->
+            <p style="text-align: center; color: var(--color-text-darkgray);">Carregando lista de espera...</p>
         </div>
     </div>
 
@@ -523,78 +591,29 @@
         }
 
         // Function to open the booking modal
-        function openBookingModal(courtId) {
+        function openBookingModal(courtId, startTime) {
             document.getElementById('modalCourtId').innerText = courtId;
             document.getElementById('formCourtId').value = courtId;
+            document.getElementById('bookingDate').value = currentDisplayDate; // Set the date in the modal
+            document.getElementById('bookingTime').value = startTime; // Set the time in the modal
 
             const bookingDurationMinutes = window.bookingSettings.bookingDurationMinutes;
             const actualBookingDuration = bookingDurationMinutes - 1; // Subtract 1 minute
 
-            // Use the currentDisplayDate for the modal's date
-            let suggestedStartTime = new Date(`${currentDisplayDate}T${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`); 
-
-            // Find the relevant court data from the globally stored fetchedCourtsData
-            const courtData = fetchedCourtsData.find(q => q.nome === courtId);
-
-            if (courtData && courtData.agendamentos && courtData.agendamentos.length > 0) {
-                let latestEndTime = null;
-                const now = new Date();
-
-                // Filter relevant bookings for the *currentDisplayDate*
-                const relevantBookings = courtData.agendamentos.filter(slot => {
-                    const slotStartTime = new Date(slot.startTime);
-                    const slotEndTime = new Date(slot.endTime);
-                    // Ensure the slot is on the current display date
-                    return slotStartTime.toISOString().split('T')[0] === currentDisplayDate && slotEndTime > now;
-                });
-
-                // Sort relevant bookings by end time to find the latest
-                relevantBookings.sort((a, b) => new Date(a.endTime) - new Date(b.endTime));
-
-                if (relevantBookings.length > 0) {
-                    // The latest booking is the last one in the sorted array
-                    latestEndTime = new Date(relevantBookings[relevantBookings.length - 1].endTime);
-                }
-
-                if (latestEndTime) {
-                    // If current time is within or before the latest booking, start 1 minute after it ends
-                    // Only adjust if the latestEndTime is on the currentDisplayDate
-                    if (latestEndTime.toISOString().split('T')[0] === currentDisplayDate && now < latestEndTime) {
-                        suggestedStartTime = new Date(latestEndTime.getTime() + (1 * 60 * 1000)); // Add 1 minute
-                    } else {
-                        // If all relevant bookings are in the past, or current time is after the last relevant booking, use current time
-                        suggestedStartTime = new Date(`${currentDisplayDate}T${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`);
-                    }
-                }
-            }
-
-            // Remove a lógica de arredondamento de suggestedStartTime
-            suggestedStartTime.setSeconds(0);
-            suggestedStartTime.setMilliseconds(0);
-            
-            // Se o suggestedStartTime for no passado (em relação à hora atual do dia de exibição), ajuste para a hora atual
-            const now = new Date();
-            const currentDateTimeOnDisplayDate = new Date(`${currentDisplayDate}T${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`);
-
-            if (suggestedStartTime < currentDateTimeOnDisplayDate) {
-                suggestedStartTime = currentDateTimeOnDisplayDate;
-                suggestedStartTime.setSeconds(0);
-                suggestedStartTime.setMilliseconds(0);
-            }
-
-            // Set the date and time in the modal
-            document.getElementById('bookingDate').value = currentDisplayDate; // Always use the displayed date
-            document.getElementById('bookingTime').value = suggestedStartTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-            
             // Calculate and display the estimated end time in the modal for user info
-            const estimatedEndTime = new Date(suggestedStartTime.getTime() + (actualBookingDuration * 60 * 1000));
+            const startDateTime = new Date(`${currentDisplayDate}T${startTime}`);
+            const estimatedEndTime = new Date(startDateTime.getTime() + (actualBookingDuration * 60 * 1000));
             const estimatedEndTimeString = estimatedEndTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
             // Update display elements in the modal
             document.getElementById('estimatedBookingDuration').innerText = actualBookingDuration;
             document.getElementById('estimatedEndTime').innerText = estimatedEndTimeString;
 
+            // Reset player count to 2 and render inputs
+            currentPlayerCount = 2;
+            document.getElementById('playerCount').innerText = currentPlayerCount;
             renderPlayerInputs();
+
             document.getElementById('bookingModal').style.display = 'flex';
         }
 
@@ -612,6 +631,11 @@
                 inputGroup.className = 'player-input-group';
                 inputGroup.innerHTML = `
                     <input type="text" name="players" placeholder="Nome do Integrante ${i + 1}" required>
+                    <div class="player-type-radio">
+                        <label><input type="radio" name="playerType_${i}" value="Associado" checked> A</label>
+                        <label><input type="radio" name="playerType_${i}" value="Familiar"> F</label>
+                        <label><input type="radio" name="playerType_${i}" value="Convidado"> C</label>
+                    </div>
                     ${i >= 2 ? '<button type="button" onclick="removePlayerField(this)">-</button>' : ''}
                 `;
                 playerInputsDiv.appendChild(inputGroup);
@@ -620,14 +644,14 @@
 
         function changePlayerCount(delta) {
             const newCount = currentPlayerCount + delta;
-            if (newCount >= 2 && newCount <= 4) {
+            if (newCount >= 2 && newCount <= 6) { // Changed max to 6
                 currentPlayerCount = newCount;
                 document.getElementById('playerCount').innerText = currentPlayerCount;
                 renderPlayerInputs();
             } else if (newCount < 2) {
                 alert("Mínimo de 2 integrantes.");
-            } else if (newCount > 4) {
-                alert("Máximo de 4 integrantes.");
+            } else if (newCount > 6) { // Changed max to 6
+                alert("Máximo de 6 integrantes.");
             }
         }
 
@@ -649,9 +673,7 @@
 
         function renderWaitingListInputs() {
             const waitingPlayerInputsDiv = document.getElementById('waitingPlayerInputs');
-            // Adicionado um log para depuração
-            console.log('renderWaitingListInputs: waitingPlayerInputsDiv', waitingPlayerInputsDiv);
-            if (waitingPlayerInputsDiv) { // Verifica se o elemento existe antes de tentar manipulá-lo
+            if (waitingPlayerInputsDiv) {
                 waitingPlayerInputsDiv.innerHTML = '';
 
                 for (let i = 0; i < currentWaitingPlayerCount; i++) {
@@ -659,6 +681,11 @@
                     inputGroup.className = 'player-input-group';
                     inputGroup.innerHTML = `
                         <input type="text" name="waiting_players_input" placeholder="Nome do Integrante ${i + 1}" required>
+                        <div class="player-type-radio">
+                            <label><input type="radio" name="waitingPlayerType_${i}" value="Associado" checked> A</label>
+                            <label><input type="radio" name="waitingPlayerType_${i}" value="Familiar"> F</label>
+                            <label><input type="radio" name="waitingPlayerType_${i}" value="Convidado"> C</label>
+                        </div>
                         ${i >= 2 ? '<button type="button" onclick="removeWaitingPlayerField(this)">-</button>' : ''}
                     `;
                     waitingPlayerInputsDiv.appendChild(inputGroup);
@@ -670,14 +697,14 @@
 
         function changeWaitingPlayerCount(delta) {
             const newCount = currentWaitingPlayerCount + delta;
-            if (newCount >= 2 && newCount <= 4) {
+            if (newCount >= 2 && newCount <= 6) { // Changed max to 6
                 currentWaitingPlayerCount = newCount;
                 document.getElementById('waitingPlayerCount').innerText = currentWaitingPlayerCount;
                 renderWaitingListInputs();
             } else if (newCount < 2) {
                 alert("Mínimo de 2 integrantes para a lista de espera.");
-            } else if (newCount > 4) {
-                alert("Máximo de 4 integrantes para a lista de espera.");
+            } else if (newCount > 6) { // Changed max to 6
+                alert("Máximo de 6 integrantes para a lista de espera.");
             }
         }
 
@@ -685,19 +712,27 @@
             if (currentWaitingPlayerCount > 2) {
                 buttonElement.closest('.player-input-group').remove();
                 currentWaitingPlayerCount--;
-                document.getElementById('playerCount').innerText = currentPlayerCount;
+                document.getElementById('waitingPlayerCount').innerText = currentWaitingPlayerCount;
             }
         }
 
         // Função para adicionar uma nova entrada na lista de espera via API
         async function addWaitingEntry() {
             const playerInputs = document.querySelectorAll('#waitingPlayerInputs input[name="waiting_players_input"]');
-            const players = Array.from(playerInputs).map(input => input.value.trim()).filter(value => value !== '');
+            const players = [];
+            for (let i = 0; i < playerInputs.length; i++) {
+                const playerName = playerInputs[i].value.trim();
+                if (playerName) {
+                    const playerType = document.querySelector(`input[name="waitingPlayerType_${i}"]:checked`).value;
+                    players.push({ name: playerName, type: playerType });
+                }
+            }
+            
             const preferredCourt = document.getElementById('waiting_preferred_court_select').value;
             const preferredTime = document.getElementById('waiting_preferred_time_input').value;
 
-            if (players.length < 2 || players.length > 4) {
-                alert("É obrigatório ter 2 ou 4 integrantes para a lista de espera.");
+            if (players.length < 2 || players.length > 6) { // Updated validation to 6
+                alert("É obrigatório ter entre 2 e 6 integrantes para a lista de espera.");
                 return;
             }
 
@@ -763,192 +798,260 @@
         // Função para atualizar a exibição da lista de espera (chamada após adicionar/remover)
         async function updateWaitingListDisplay() {
             const currentWaitingListDiv = document.getElementById('currentWaitingList');
-            // Adicionado um log para depuração
-            console.log('updateWaitingListDisplay: currentWaitingListDiv', currentWaitingListDiv);
-            if (currentWaitingListDiv) { // Verifica se o elemento existe antes de tentar manipulá-lo
-                currentWaitingListDiv.innerHTML = '<p>Carregando lista de espera...</p>'; // Show loading
-
-                try {
-                    const response = await fetch('/api/get_waiting_list');
-                    if (!response.ok) {
-                        throw new Error('Não foi possível carregar a lista de espera.');
-                    }
-                    const data = await response.json();
-                    
-                    currentWaitingListDiv.innerHTML = ''; // Clear current display
-
-                    if (data.waiting_list.length > 0) {
-                        data.waiting_list.forEach(entry => {
-                            const entryDiv = document.createElement('div');
-                            entryDiv.className = 'waiting-list-item';
-                            entryDiv.id = `waiting-entry-${entry.id}`; 
-                            
-                            const requestedAtDate = new Date(entry.requestedAt);
-                            const requestedAtTime = requestedAtDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-
-                            entryDiv.innerHTML = `
-                                <span class="player-names">${entry.players.join(', ')}</span>
-                                <span class="details">Quadra: ${entry.preferredCourt || 'Qualquer'} | Hora: ${entry.preferredTime || 'Qualquer'}</span>
-                                <span class="details">Solicitado em: ${requestedAtTime} por ${entry.requestedBy || 'Desconhecido'}</span>
-                                <button type="button" class="remove-btn" onclick="removeWaitingEntry(${entry.id})">&times;</button>
-                            `;
-                            currentWaitingListDiv.appendChild(entryDiv);
-                        });
-                    } else {
-                        currentWaitingListDiv.innerHTML = '<p>Ninguém na fila de espera.</p>';
-                    }
-                } catch (error) {
-                    console.error('Erro ao atualizar exibição da lista de espera:', error);
-                    currentWaitingListDiv.innerHTML = `<p style="color: var(--message-error-text);">Erro ao carregar lista de espera: ${error.message}</p>`;
-                }
-            } else {
-                console.error('Erro: Elemento #currentWaitingList não encontrado para updateWaitingListDisplay.');
-            }
-        }
-
-
-        // Função para carregar e renderizar os agendamentos para a data selecionada
-        async function loadAndRenderBookingsForDate(dateString) {
-            const courtsGrid = document.getElementById('courtsGrid');
-            courtsGrid.innerHTML = '<p style="text-align: center; color: var(--color-text-darkgray);">Carregando agendamentos...</p>';
-            console.log(`1. Mensagem de carregamento inicial definida para a data: ${dateString}.`);
+            currentWaitingListDiv.innerHTML = '<p style="text-align: center; color: var(--color-text-darkgray);">Carregando lista de espera...</p>';
 
             try {
-                const apiResponse = await fetch(`/api/index_data?selected_date=${dateString}`);
-                if (!apiResponse.ok) {
-                    throw new Error(`HTTP error! status: ${apiResponse.status}`);
+                const response = await fetch('/api/get_waiting_list');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const quadrasData = await apiResponse.json();
-                fetchedCourtsData = quadrasData; // Update global data
-                console.log('4. Dados buscados e analisados para a data selecionada:', quadrasData);
+                const data = await response.json();
+                const waitingList = data.waiting_list;
 
-                courtsGrid.innerHTML = ''; // Limpa a mensagem de carregamento
-                console.log('5. Mensagem de carregamento limpa. Começando a renderizar as quadras.');
+                currentWaitingListDiv.innerHTML = '';
+                if (waitingList.length === 0) {
+                    currentWaitingListDiv.innerHTML = '<p style="text-align: center; color: var(--color-text-darkgray);">Nenhuma entrada na lista de espera.</p>';
+                } else {
+                    waitingList.forEach(entry => {
+                        const listItem = document.createElement('div');
+                        listItem.className = 'waiting-list-item';
+                        
+                        const playersInfo = entry.players.map(p => `${p.name} (${p.type})`).join(', ');
+                        const preferredInfo = `<strong>Quadra/Hora Pref.:</strong> ${entry.preferredCourt || 'Qualquer Quadra'} ${entry.preferredTime ? 'às ' + entry.preferredTime : ''}`;
+                        const requestedAt = new Date(entry.requestedAt).toLocaleString('pt-BR');
 
-                const courts = ["QUADRA 1", "QUADRA 2", "QUADRA 3", "QUADRA 4", "QUADRA 5", "QUADRA 6", "QUADRA 7"];
-
-                courts.forEach(courtName => {
-                    console.log(`6a. Processando quadra: ${courtName}`);
-                    const quadra = quadrasData.find(q => q.nome === courtName);
-                    console.log(`6b. Dados da quadra ${courtName}:`, quadra);
-                    
-                    const courtColumn = document.createElement('div');
-                    courtColumn.className = 'court-column';
-                    
-                    let bookingListHtml = '';
-                    if (quadra && quadra.agendamentos && quadra.agendamentos.length > 0) {
-                        console.log(`6c. Agendamentos encontrados para ${courtName}:`, quadra.agendamentos.length);
-                        quadra.agendamentos.forEach(slot => {
-                            let statusClass = '';
-                            let content = '';
-                            // Já são strings ISO do backend, então substring(11, 16) funciona
-                            // Note: The backend now includes date in content_html, so we might not need to parse it here.
-                            // Let's use the content directly from the backend.
-                            content = slot.content; // Use content directly from backend as it now includes date
-
-                            if (slot.status_class === 'confirmed') {
-                                statusClass = 'confirmed';
-                            } else if (slot.status_class === 'playing') {
-                                statusClass = 'playing';
-                            } else if (slot.status_class === 'alert-yellow') {
-                                statusClass = 'alert-yellow'; 
-                            } else if (slot.status_class === 'block-booking') {
-                                statusClass = 'block-booking';
-                            } else if (slot.status_class === 'faded-past') { 
-                                statusClass = 'faded-past';
-                            }
-
-                            bookingListHtml += `<div class="booking-item ${statusClass}">${content}</div>`;
-                        });
-                    } 
-                    // Sempre adiciona o botão "Agendar Novo Horário" no final da lista para cada quadra
-                    bookingListHtml += `
-                        <div class="booking-item free-slot" onclick="openBookingModal('${courtName}')">
-                            Agendar Novo Horário
-                        </div>
-                    `;
-
-                    courtColumn.innerHTML = `
-                        <h3>${courtName}</h3>
-                        <div class="booking-list">
-                            ${bookingListHtml}
-                        </div>
-                    `;
-                    courtsGrid.appendChild(courtColumn);
-                    console.log('6e. Coluna da quadra anexada para:', courtName);
-                });
-
-                // Adiciona a coluna da Lista de Espera (fora do loop de quadras)
-                const waitingListColumn = document.createElement('div');
-                waitingListColumn.className = 'court-column';
-                waitingListColumn.innerHTML = `
-                    <h3>Lista de Espera</h3>
-                    <div class="booking-list">
-                        <div class="waiting-list-form">
-                            <h4>Adicionar Pessoa à Fila</h4>
-                            <div class="form-group">
-                                <label>Integrantes (2 ou 4):</label>
-                                <div class="player-count-control">
-                                    <button type="button" onclick="changeWaitingPlayerCount(-1)">-</button>
-                                    <span id="waitingPlayerCount">2</span>
-                                    <button type="button" onclick="changeWaitingPlayerCount(1)">+</button>
-                                </div>
-                                <div id="waitingPlayerInputs">
-                                    <!-- Player input fields for waiting list will be added here by JavaScript -->
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="waiting_preferred_court_select">Quadra Preferida (opcional):</label>
-                                <select id="waiting_preferred_court_select" class="form-control">
-                                    <option value="">Qualquer</option>
-                                    {% for court in courts %}
-                                        <option value="{{ court }}">{{ court }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="waiting_preferred_time_input">Hora Preferida (opcional):</label>
-                                <input type="time" id="waiting_preferred_time_input" class="form-control">
-                            </div>
-                            <div class="button-group">
-                                <button type="button" class="submit" onclick="addWaitingEntry()">Adicionar à Fila</button>
-                            </div>
-                        </div>
-
-                        <h4 style="margin-top: 20px;">Fila Atual:</h4>
-                        <div id="currentWaitingList">
-                            <p>Carregando lista de espera...</p>
-                        </div>
-                    </div>
-                `;
-                courtsGrid.appendChild(waitingListColumn);
-                console.log('7. Coluna da lista de espera anexada.');
-
-                renderWaitingListInputs();
-                await updateWaitingListDisplay();
-                console.log('8. Lista de espera renderizada e atualizada.');
-
+                        listItem.innerHTML = `
+                            <div class="player-names"><strong>Integrantes:</strong> ${playersInfo}</div>
+                            <div class="details">${preferredInfo}</div>
+                            <div class="details">Solicitado Em: ${requestedAt}</div>
+                            <button class="remove-btn" onclick="removeWaitingEntry('${entry.id}')">X</button>
+                        `;
+                        currentWaitingListDiv.appendChild(listItem);
+                    });
+                }
             } catch (error) {
-                console.error('Erro ao carregar agendamentos do dia:', error);
-                courtsGrid.innerHTML = `<p style="text-align: center; color: var(--message-error-text);">Erro ao carregar agendamentos do dia: ${error.message}. Por favor, recarregue a página.</p>`;
-                console.log('9. Erro capturado e exibido.');
+                console.error('Erro ao carregar lista de espera:', error);
+                currentWaitingListDiv.innerHTML = `<p style="text-align: center; color: var(--message-error-text);">Erro ao carregar lista de espera: ${error.message}.</p>`;
             }
         }
 
-        // Function to handle date change
-        function changeDisplayDate() {
-            const selectedDate = document.getElementById('displayDate').value;
-            currentDisplayDate = selectedDate; // Update the global variable
-            loadAndRenderBookingsForDate(selectedDate);
+        // Função para carregar os agendamentos do dia selecionado
+        async function loadBookingsForDate(dateString) {
+            const courtsGrid = document.getElementById('courtsGrid');
+            courtsGrid.innerHTML = '<p style="text-align: center; color: var(--color-text-darkgray);">Carregando agendamentos do dia...</p>';
+
+            try {
+                const response = await fetch(`/api/index_data?selected_date=${dateString}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                fetchedCourtsData = await response.json(); // Store fetched data globally
+                
+                courtsGrid.innerHTML = ''; // Clear loading message
+
+                const courtsOrder = ["QUADRA 1", "QUADRA 2", "QUADRA 3", "QUADRA 4", "QUADRA 5", "QUADRA 6", "QUADRA 7"];
+                const bookingDurationMinutes = window.bookingSettings.bookingDurationMinutes;
+                const actualBookingDuration = bookingDurationMinutes - 1;
+
+                courtsOrder.forEach(courtName => {
+                    const courtColumn = document.createElement('div');
+                    courtColumn.className = 'court-column';
+                    courtColumn.innerHTML = `<h3>${courtName}</h3><div class="booking-list" id="bookingList-${courtName}"></div>`;
+                    courtsGrid.appendChild(courtColumn);
+
+                    const bookingListDiv = document.getElementById(`bookingList-${courtName}`);
+                    const courtData = fetchedCourtsData.find(q => q.nome === courtName);
+
+                    const dayStart = new Date(`${dateString}T08:00:00`);
+                    const dayEnd = new Date(`${dateString}T23:00:00`); // Assuming day ends at 23:00
+                    let currentTimePointer = new Date(dayStart);
+                    const now = new Date();
+
+                    const courtBookingsForDate = (courtData && courtData.agendamentos) ? 
+                                                courtData.agendamentos.sort((a, b) => new Date(a.startTime) - new Date(b.startTime)) : [];
+
+                    courtBookingsForDate.forEach(booking => {
+                        const bookingStartTime = new Date(booking.startTime);
+                        const bookingEndTime = new Date(booking.endTime);
+
+                        // If there's a gap before this booking
+                        if (currentTimePointer < bookingStartTime) {
+                            const freeSlotEndTime = new Date(bookingStartTime.getTime() - (1 * 60 * 1000)); // 1 minute before booking starts
+                            const freeSlotDurationMinutes = (freeSlotEndTime.getTime() - currentTimePointer.getTime()) / (60 * 1000);
+
+                            // Only display if the free slot is 30 minutes or longer
+                            if (freeSlotDurationMinutes >= 30) { 
+                                let suggestedModalStartTime = new Date(currentTimePointer); // Start with the current pointer (end of previous booking or day start)
+
+                                // If this free slot is immediately after a *previous booking*,
+                                // the suggested start time for a *new* booking should be 1 minute after that previous booking's end.
+                                // currentTimePointer already holds the end time of the previous booking.
+                                // So, if currentTimePointer is not the absolute start of the day (8:00 AM), add 1 minute.
+                                if (courtBookingsForDate.length > 0 && currentTimePointer.getTime() > dayStart.getTime()) {
+                                    suggestedModalStartTime = new Date(currentTimePointer.getTime() + (1 * 60 * 1000));
+                                }
+
+                                // If the suggested start time is in the past (for today), set it to the current time.
+                                // This handles cases where the free slot started in the past, but we want to book from now.
+                                if (suggestedModalStartTime < now && suggestedModalStartTime.toDateString() === now.toDateString()) {
+                                    suggestedModalStartTime = now;
+                                }
+                                
+                                // Round to nearest minute for display consistency in the modal
+                                suggestedModalStartTime.setSeconds(0);
+                                suggestedModalStartTime.setMilliseconds(0);
+
+                                // If the free slot itself (from currentTimePointer to freeSlotEndTime) is entirely in the past,
+                                // mark it as faded-past and disable click.
+                                const isFreeSlotPast = now > freeSlotEndTime;
+
+                                const freeItem = document.createElement('div');
+                                freeItem.className = 'booking-item free-slot';
+                                if (isFreeSlotPast) {
+                                    freeItem.classList.add('faded-past');
+                                    freeItem.onclick = null; // Disable click for past free slots
+                                } else {
+                                    freeItem.onclick = () => openBookingModal(courtName, suggestedModalStartTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }));
+                                }
+                                // Display the actual start and end of the *free slot period* (only time)
+                                freeItem.innerHTML = `${currentTimePointer.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})} - ${freeSlotEndTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}<br>Livre`;
+                                bookingListDiv.appendChild(freeItem);
+                            }
+                        }
+
+                        // Add the actual booking item
+                        const bookingItem = document.createElement('div');
+                        bookingItem.className = 'booking-item';
+                        
+                        let content = '';
+                        let statusClass = '';
+
+                        const startDisplay = new Date(booking.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'});
+                        const endDisplay = new Date(booking.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'});
+
+                        if (booking.isBlockBooking) {
+                            content = `Bloqueado (${booking.blockBookingReason})<br>${startDisplay} - ${endDisplay}`;
+                            statusClass = 'block-booking';
+                        } else {
+                            let playersToDisplayString = '';
+                            // Verifica se o array 'players' está disponível e tem conteúdo
+                            // NOTA: Para que o tipo "Associado" seja exibido corretamente,
+                            // o backend (Flask) deve fornecer a lista de jogadores no objeto 'booking'
+                            // com a estrutura [{name: "Nome", type: "Associado"}, ...]
+                            if (booking.players && Array.isArray(booking.players) && booking.players.length > 0) {
+                                // Ordena jogadores: Associado primeiro
+                                const sortedPlayers = [...booking.players].sort((a, b) => {
+                                    if (a.type === 'Associado' && b.type !== 'Associado') return -1;
+                                    if (a.type !== 'Associado' && b.type === 'Associado') return 1;
+                                    return 0; // Mantém a ordem original para o mesmo tipo
+                                });
+
+                                playersToDisplayString = sortedPlayers.map(p => {
+                                    if (p.type === 'Associado') {
+                                        return `<span style="font-weight: bold;">${p.name} - (Associado)</span>`;
+                                    }
+                                    return p.name;
+                                }).join(', ');
+                            } else {
+                                // Fallback para agendamentos antigos ou se o backend não fornecer o array 'players' estruturado.
+                                // Assume que a primeira linha do 'content' contém os nomes dos jogadores.
+                                playersToDisplayString = (booking.content.split('<br>')[0] || 'Jogadores Desconhecidos');
+                            }
+
+                            let bookingStatusText = "";
+                            const bookingEndDateTime = new Date(booking.endTime);
+                            
+                            if (now > bookingEndDateTime) {
+                                bookingStatusText = "Tempo Esgotado!";
+                                statusClass = 'faded-past'; 
+                            } else if (bookingEndDateTime.getTime() - now.getTime() <= 15 * 60 * 1000) { // 15 minutes in ms
+                                bookingStatusText = "Atenção! (Fim Próximo)";
+                                statusClass = 'alert-yellow';
+                            } else {
+                                bookingStatusText = "Em Jogo";
+                                statusClass = 'confirmed'; 
+                            }
+                            
+                            content = `${playersToDisplayString}<br>${startDisplay} - ${endDisplay}<br><strong>${bookingStatusText}</strong>`;
+                        }
+                        
+                        bookingItem.classList.add(statusClass);
+                        bookingItem.innerHTML = content; 
+                        // Disable click for booked/blocked slots
+                        bookingItem.onclick = null; 
+                        bookingListDiv.appendChild(bookingItem);
+
+                        currentTimePointer = new Date(bookingEndTime);
+                    });
+
+                    // Add a final free slot if there's time remaining after the last booking
+                    if (currentTimePointer < dayEnd) {
+                        const freeSlotEndTime = dayEnd; // The end of the day
+                        const freeSlotDurationMinutes = (freeSlotEndTime.getTime() - currentTimePointer.getTime()) / (60 * 1000);
+
+                        // Only display if the free slot is 30 minutes or longer
+                        if (freeSlotDurationMinutes >= 30) { 
+                            let suggestedModalStartTime = new Date(currentTimePointer);
+
+                            // If there were any bookings before this final free slot,
+                            // the suggested start time for a new booking should be 1 minute after the last booking's end.
+                            // currentTimePointer already holds the end time of the last booking.
+                            if (courtBookingsForDate.length > 0) { // If there was at least one booking
+                                suggestedModalStartTime = new Date(currentTimePointer.getTime() + (1 * 60 * 1000));
+                            }
+                            
+                            // If the suggested start time is in the past (for today), set it to the current time.
+                            if (suggestedModalStartTime < now && suggestedModalStartTime.toDateString() === now.toDateString()) {
+                                suggestedModalStartTime = now;
+                            }
+
+                            // Round to nearest minute
+                            suggestedModalStartTime.setSeconds(0);
+                            suggestedModalStartTime.setMilliseconds(0);
+
+                            // If the free slot itself is entirely in the past, mark as faded-past
+                            const isFreeSlotPast = now > freeSlotEndTime;
+
+                            const freeItem = document.createElement('div');
+                            freeItem.className = 'booking-item free-slot';
+                            if (isFreeSlotPast) {
+                                freeItem.classList.add('faded-past');
+                                freeItem.onclick = null; // Disable click for past free slots
+                            } else {
+                                freeItem.onclick = () => openBookingModal(courtName, suggestedModalStartTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }));
+                            }
+                            freeItem.innerHTML = `${currentTimePointer.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})} - ${freeSlotEndTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}<br>Livre`;
+                            bookingListDiv.appendChild(freeItem);
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Erro ao carregar agendamentos:', error);
+                courtsGrid.innerHTML = `<p style="text-align: center; color: var(--message-error-text);">Erro ao carregar agendamentos: ${error.message}. Por favor, recarregue a página.</p>`;
+            }
         }
 
-        // Ao carregar a página
-        window.addEventListener('load', async () => {
+        // Event listener for date change
+        function changeDisplayDate() {
+            currentDisplayDate = document.getElementById('displayDate').value;
+            loadBookingsForDate(currentDisplayDate);
+        }
+
+        // Initial load on page load
+        document.addEventListener('DOMContentLoaded', () => {
             updateCurrentTime();
-            setInterval(updateCurrentTime, 1000);
-            renderPlayerInputs(); // Para o modal de agendamento (este pode permanecer aqui, pois o modal está sempre no HTML)
-            // Load bookings for the date initially passed by Flask (today's date)
-            await loadAndRenderBookingsForDate(currentDisplayDate); 
+            setInterval(updateCurrentTime, 1000); // Update time every second
+
+            // Set initial date to today if not already set by Flask
+            const today = new Date().toISOString().split('T')[0];
+            if (!document.getElementById('displayDate').value) {
+                document.getElementById('displayDate').value = today;
+                currentDisplayDate = today;
+            }
+            
+            loadBookingsForDate(currentDisplayDate);
+            updateWaitingListDisplay(); // Load waiting list on page load
+            renderWaitingListInputs(); // Render initial waiting list player inputs
         });
     </script>
 </body>
