@@ -13,82 +13,64 @@
             box-sizing: border-box;
         }
 
-        /* Definição da Paleta de Cores (baseada no código fornecido e ajustes) */
+        /* Definição da Paleta de Cores */
         :root {
-            --color-primary-green: #355E3B; /* Um verde floresta/pinho */
-            --color-darker-green-hover: #2D4C3A;
-            --color-lighter-green-action: #5BA85C;
-            --color-even-lighter-green-hover: #4F9A51;
-            
+            /* Cores Originais (para consistência do layout) */
+            --color-primary-green: #355E3B;
             --color-red-delete: #C74B4B;
-            --color-darker-red-hover: #B03A3A;
+            --color-blue-info: #3498db;
+            --color-background-offwhite: #F8F5F0;
+            --color-text-darkgray: #4A4A4A;
+            --color-card-background: #ffffff;
+            --color-border-beige: #E0D8CC;
+
+            /* Cores de Status da TV View (Acessíveis) */
+            --tv-free-bg: #f8f9fa; /* Cinza muito claro */
+            --tv-free-text: #212529;
+            --tv-free-border: #dee2e6;
+
+            --tv-booked-bg: #cfe2ff; /* Azul claro para agendado */
+            --tv-booked-text: #004085;
+            --tv-booked-border: #b8daff;
+
+            --block-booking-bg: #6c757d; /* Cinza médio para bloqueado */
+            --block-booking-text: #ffffff;
+            --block-booking-border: #5a6268;
+
+            --slot-playing-active-bg: #0d6efd; /* Azul vibrante para "Em Jogo" */
+            --slot-playing-active-text: #ffffff;
+            --slot-playing-active-border: #0a58ca;
+
+            --slot-ending-soon-yellow-bg: #ffc107; /* Amarelo/Âmbar para "Atenção" */
+            --slot-ending-soon-yellow-text: #000000;
+            --slot-ending-soon-yellow-border: #ffb300;
+
+            --slot-ending-soon-red-bg: #fd7e14; /* Laranja forte para "Tempo Esgotado" */
+            --slot-ending-soon-red-text: #ffffff;
+            --slot-ending-soon-red-border: #e36a00;
+
+            --past-slot-bg: #e9ecef; /* Cinza para agendamentos passados */
+            --past-slot-text: #6c757d;
+            --past-slot-border: #ced4da;
             
-            --color-yellow-archive: #E6B300;
-            --color-darker-yellow-hover: #CC9900;
-            
-            --color-blue-info: #3498db; /* Azul para informação/ação */
-            --color-darker-blue-info-hover: #2A7ABA;
-
-            --color-background-offwhite: #F8F5F0; /* Fundo um off-white/bege suave */
-            --color-text-darkgray: #4A4A4A; /* Texto em cinza escuro sofisticado */
-            --color-card-background: #ffffff; /* Cartões em branco puro para contraste */
-            --color-border-beige: #E0D8CC; /* Borda bege/light brown */
-            --color-input-border: #D1C7B7;
-            
-            /* TV View Specific Colors (Ajustadas para maior clareza e contraste) */
-            --tv-free-bg: #e6ffe6; /* Light green for free slots */
-            --tv-free-text: #155724;
-            --tv-free-border: #a3e6a3;
-
-            --tv-booked-bg: #cceeff; /* Light blue for booked slots */
-            --tv-booked-text: #0056b3;
-            --tv-booked-border: #007bff;
-
-            --block-booking-bg: #e0bbe4; /* Lilac/Purple for blocked */
-            --block-booking-text: #6a0572;
-            --block-booking-border: #bb7ec2;
-
-            --past-slot-bg: #f0f0f0; /* Grey for past slots/bookings */
-            --past-slot-text: #999;
-            --past-slot-border: #ccc;
-
-            /* NEW: Distinct classes for alerts */
-            --slot-playing-active-bg: #d4edda; /* A softer green for active play */
-            --slot-playing-active-text: #155724;
-            --slot-playing-active-border: #28a745;
-
-            --slot-ending-soon-yellow-bg: #fff3cd; /* Yellow for ending soon */
-            --slot-ending-soon-yellow-text: #856404;
-            --slot-ending-soon-yellow-border: #ffc107;
-
-            --slot-ending-soon-red-bg: #f8d7da; /* Red for time out */
-            --slot-ending-soon-red-text: #721c24;
-            --slot-ending-soon-red-border: #dc3545;
-
-            /* General message styles if needed */
-            --message-success-bg: #d4edda;
-            --message-success-text: #155724;
-            --message-error-bg: #f8d7da;
-            --message-error-text: #721c24;
-
-            /* Cores para o alerta de próximo agendamento */
-            --alert-next-booking-bg-from: rgba(220, 53, 69, 0.9); /* Vermelho avermelhado mais opaco */
-            --alert-next-booking-bg-to: rgba(255, 99, 71, 0.9); /* Laranja avermelhado mais opaco */
+            /* Alerta de Próximo Agendamento */
+            --alert-next-booking-bg-from: #d9531e; /* Laranja forte do tema acessível */
+            --alert-next-booking-bg-to: #fd7e14;
             --alert-next-booking-text: white;
-            --alert-next-booking-highlight: #FFD700; /* Dourado para destaque */
+            --alert-next-booking-highlight: #ffb700;
 
-            /* Variáveis para alturas dinâmicas (serão definidas por JS no body) */
+            /* Variáveis para alturas dinâmicas */
             --navbar-dynamic-height: 0px; 
             --alert-area-dynamic-height: 0px; 
-            --dashboard-horizontal-padding: 20px; /* Padding lateral fixo para o dashboard */
+            --dashboard-horizontal-padding: 20px;
         }
 
         html, body {
-            height: 100%; /* Garante que html e body ocupem 100% da viewport */
+            height: 100%;
             width: 100%;
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Controla o overflow no nível mais alto */
+            overflow: hidden;
         }
 
         body {
@@ -97,23 +79,22 @@
             color: var(--color-text-darkgray);
             display: flex;
             flex-direction: column;
-            /* Padding dinâmico para criar espaço para os elementos fixos */
             padding-top: var(--navbar-dynamic-height); 
             padding-bottom: var(--alert-area-dynamic-height);
         }
 
         .navbar {
-            position: fixed; /* Fixa a barra de navegação no topo */
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             display: flex;
             justify-content: center;
-            padding: 10px 0; /* Padding interno */
+            padding: 10px 0;
             background-color: var(--color-card-background);
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            z-index: 101; /* Garante que fique acima de outros elementos */
-            flex-shrink: 0; /* Impede que a navbar encolha */
+            z-index: 101;
+            flex-shrink: 0;
         }
         .navbar a {
             padding: 6px 12px;
@@ -132,14 +113,18 @@
             background-color: var(--color-primary-green);
             color: white;
         }
+        .navbar a.logout {
+             background-color: var(--color-red-delete);
+             color: white;
+        }
 
         .dashboard-container {
-            flex: 1; /* Ocupa todo o espaço vertical restante entre navbar e alerta */
+            flex: 1;
             display: flex;
             flex-direction: column;
-            width: 100%; /* Ocupa a largura total do body */
-            padding: var(--dashboard-horizontal-padding); /* Padding lateral */
-            overflow-y: auto; /* Permite rolagem vertical no container principal se o conteúdo for muito alto */
+            width: 100%;
+            padding: var(--dashboard-horizontal-padding);
+            overflow-y: auto;
         }
 
         .header {
@@ -150,7 +135,7 @@
             padding: 15px 25px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             color: var(--color-text-darkgray);
-            flex-shrink: 0; /* Impede que o cabeçalho encolha */
+            flex-shrink: 0;
         }
 
         .header h1 {
@@ -169,14 +154,14 @@
         }
 
         .quadras-grid {
-            flex: 1; /* Ocupa todo o espaço vertical restante dentro do dashboard-container */
+            flex: 1;
             display: flex;
-            flex-wrap: nowrap; /* Garante que as quadras fiquem em uma única linha */
+            flex-wrap: nowrap;
             gap: 15px;
-            overflow-x: auto; /* Permite rolagem horizontal para as quadras */
-            overflow-y: hidden; /* Evita rolagem vertical na grade de quadras */
-            align-items: stretch; /* Garante que as quadras se estiquem para preencher a altura */
-            justify-content: space-around; /* Alinha as quadras distribuindo o espaço igualmente */
+            overflow-x: auto;
+            overflow-y: hidden;
+            align-items: stretch;
+            justify-content: space-around;
         }
 
         .quadra {
@@ -188,8 +173,8 @@
             display: flex;
             flex-direction: column;
             transition: none;
-            flex: 1; /* Permite que as quadras cresçam e se distribuam igualmente */
-            height: 100%; /* Ocupa a altura total disponível no flex container (quadras-grid) */
+            flex: 1;
+            height: 100%;
         }
 
         .quadra-header {
@@ -227,7 +212,7 @@
 
         .horarios-container {
             flex: 1;
-            overflow-y: auto; /* Permite rolagem vertical para os slots dentro de cada quadra */
+            overflow-y: auto;
             padding-right: 5px;
         }
 
@@ -246,7 +231,6 @@
             transition: background-color 0.5s ease-in-out, box-shadow 0.5s ease-in-out;
         }
 
-        /* Cores de fundo com transparência mais suave (mantidas as cores originais, mas com variáveis) */
         .slot-livre {
             background-color: var(--tv-free-bg);
             border: 1px solid var(--tv-free-border);
@@ -259,15 +243,15 @@
             color: var(--tv-booked-text);
         }
 
-        .horario-slot.slot-playing-active { /* Usado para "Em Andamento" */
+        .horario-slot.slot-playing-active {
             background-color: var(--slot-playing-active-bg);
             border: 1px solid var(--slot-playing-active-border);
             color: var(--slot-playing-active-text);
-            box-shadow: 0 0 8px rgba(40, 167, 69, 0.3); /* Greenish shadow */
-            animation: none; /* No pulse for just playing */
+            box-shadow: 0 0 8px rgba(13, 110, 253, 0.3);
+            animation: none;
         }
 
-        .horario-slot.slot-ending-soon-yellow { /* Usado para "Atenção!" (fim próximo) */
+        .horario-slot.slot-ending-soon-yellow {
             background-color: var(--slot-ending-soon-yellow-bg);
             border: 1px solid var(--slot-ending-soon-yellow-border);
             color: var(--slot-ending-soon-yellow-text);
@@ -275,22 +259,22 @@
             animation: pulse-yellow 1.5s infinite alternate ease-in-out;
         }
 
-        .horario-slot.slot-ending-soon-red { /* Usado para "Tempo Esgotado!" (acabou de terminar ou está muito próximo) */
+        .horario-slot.slot-ending-soon-red {
             background-color: var(--slot-ending-soon-red-bg);
             border: 1px solid var(--slot-ending-soon-red-border);
             color: var(--slot-ending-soon-red-text);
-            box-shadow: 0 0 8px rgba(244, 67, 54, 0.3);
+            box-shadow: 0 0 8px rgba(253, 126, 20, 0.3);
             animation: pulse-red 1.5s infinite alternate ease-in-out;
         }
 
-        .block-booking-tv { /* Usado para bloqueios */
+        .block-booking-tv {
             background-color: var(--block-booking-bg);
             border: 1px solid var(--block-booking-border);
             color: var(--block-booking-text);
             font-style: italic;
         }
 
-        .slot-passado { /* Usado para agendamentos passados */
+        .slot-passado {
             background-color: var(--past-slot-bg);
             border: 1px solid var(--past-slot-border);
             color: var(--past-slot-text);
@@ -304,8 +288,8 @@
             100% { box-shadow: 0 0 12px rgba(255, 193, 7, 0.4); }
         }
         @keyframes pulse-red {
-            0% { box-shadow: 0 0 8px rgba(244, 67, 54, 0.2); }
-            100% { box-shadow: 0 0 12px rgba(244, 67, 54, 0.4); }
+            0% { box-shadow: 0 0 8px rgba(253, 126, 20, 0.2); }
+            100% { box-shadow: 0 0 12px rgba(253, 126, 20, 0.4); }
         }
 
         .cliente-nome {
@@ -320,7 +304,7 @@
         }
         
         .legend {
-            position: fixed; /* Fixa a legenda no topo direito */
+            position: fixed;
             top: 20px;
             right: 20px;
             display: flex;
@@ -333,7 +317,7 @@
             backdrop-filter: blur(5px);
             color: white;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            z-index: 99; /* Garante que fique acima da grid, mas abaixo do alerta */
+            z-index: 99;
         }
 
         .legend-item {
@@ -351,7 +335,6 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        /* Cores da legenda */
         .legend-livre { background-color: var(--tv-free-bg); }
         .legend-ocupado { background-color: var(--tv-booked-bg); }
         .legend-atual { background-color: var(--slot-playing-active-bg); }
@@ -359,7 +342,6 @@
         .legend-fim-proximo { background-color: var(--slot-ending-soon-red-bg); }
         .legend-bloqueado { background-color: var(--block-booking-bg); }
 
-        /* Scrollbar customizada */
         .horarios-container::-webkit-scrollbar {
             width: 6px;
         }
@@ -375,9 +357,8 @@
             background: rgba(255, 255, 255, 0.5);
         }
 
-        /* Contêiner para múltiplos alertas de próximo agendamento */
         .next-booking-alerts-container {
-            position: fixed; /* Fixa no rodapé */
+            position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
@@ -385,17 +366,16 @@
             flex-direction: column;
             align-items: center;
             padding: 10px 0;
-            background-color: rgba(255, 255, 255, 0.95); /* Fundo quase totalmente branco */
+            background-color: rgba(255, 255, 255, 0.95);
             box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
             z-index: 100;
             gap: 8px;
-            display: none; /* Escondido por padrão, mostrado por JS */
-            flex-shrink: 0; /* Impede que o contêiner de alerta encolha */
-            max-height: 120px; /* Limita a altura máxima para o contêiner de alertas */
-            overflow-y: auto; /* Adiciona rolagem se houver muitos alertas */
+            display: none;
+            flex-shrink: 0;
+            max-height: 120px;
+            overflow-y: auto;
         }
 
-        /* Estilo para cada alerta individual */
         .next-booking-alert-item {
             background-color: var(--alert-next-booking-bg-from);
             color: var(--alert-next-booking-text);
@@ -439,7 +419,7 @@
         <a href="{{ url_for('statistics_panel') }}">Estatísticas</a>
         {% endif %}
         {% if g.user %}
-        <a href="{{ url_for('logout') }}" style="background-color: var(--color-red-delete); color: white;">Sair</a>
+        <a href="{{ url_for('logout') }}" class="logout">Sair</a>
         {% endif %}
     </div>
 
